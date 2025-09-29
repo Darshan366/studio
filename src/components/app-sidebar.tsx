@@ -1,3 +1,5 @@
+'use client';
+
 import { Dumbbell } from 'lucide-react';
 import { SidebarHeader } from '@/components/ui/sidebar';
 import AppSidebarNav from './app-sidebar-nav';
