@@ -12,6 +12,7 @@ import {
   User,
   BarChart3,
   Users,
+  MessageSquare,
 } from 'lucide-react';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import {
@@ -35,6 +36,7 @@ const navItems = [
   { href: '/schedule', label: 'Schedule', icon: Calendar },
   { href: '/progress', label: 'Progress', icon: BarChart3 },
   { href: '/matching', label: 'Matching', icon: Users },
+  { href: '/messages', label: 'Messages', icon: MessageSquare },
   { href: '/ai-suggestions', label: 'AI Suggestions', icon: Bot },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
