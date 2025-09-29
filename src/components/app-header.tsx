@@ -54,11 +54,10 @@ export function UserMenu() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            {userAvatar && user?.photoURL ? (
+            {user?.photoURL ? (
               <AvatarImage
                 src={user.photoURL}
                 alt={user.displayName || 'User avatar'}
-                data-ai-hint={userAvatar.imageHint}
               />
             ) : (
                userAvatar && <AvatarImage
@@ -81,9 +80,11 @@ export function UserMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
-          <User className="mr-2 h-4 w-4" />
-          <span>Profile</span>
+        <DropdownMenuItem asChild>
+          <Link href="/settings">
+             <User className="mr-2 h-4 w-4" />
+            <span>Profile</span>
+          </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/settings">

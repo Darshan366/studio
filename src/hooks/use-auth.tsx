@@ -7,6 +7,7 @@ import {
   useState,
   useEffect,
   ReactNode,
+  useCallback,
 } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -27,14 +28,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const handleAuthChange = useCallback(() => {
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      // Create a new user object to force re-render
+      const refreshedUser = { ...currentUser } as User;
+      // You may need to manually copy over properties if they are not enumerable
+      Object.assign(refreshedUser, currentUser);
+      setUser(refreshedUser);
+    } else {
+        setUser(null);
+    }
+  }, []);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, []);
+    window.addEventListener('auth-change', handleAuthChange);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('auth-change', handleAuthChange);
+    };
+  }, [handleAuthChange]);
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
