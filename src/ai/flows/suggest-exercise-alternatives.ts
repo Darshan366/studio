@@ -18,9 +18,7 @@ import {z} from 'genkit';
 
 // Define the input schema
 const SuggestExerciseAlternativesInputSchema = z.object({
-  exercise: z.string().describe('The user\'s preferred exercise.'),
-  availableEquipment: z.string().describe('A comma-separated list of available equipment.'),
-  workoutHistory: z.string().describe('The user\'s past workout data.'),
+  prompt: z.string().describe('The user\'s full request for exercise suggestions.'),
 });
 
 export type SuggestExerciseAlternativesInput = z.infer<
@@ -31,7 +29,7 @@ export type SuggestExerciseAlternativesInput = z.infer<
 const SuggestExerciseAlternativesOutputSchema = z.object({
   alternativeExercises: z
     .string()
-    .describe('A comma-separated list of suggested alternative exercises.'),
+    .describe('A comma-separated list of 2-4 suggested alternative exercises.'),
   reasoning: z.string().describe('The AI reasoning for suggesting these alternatives.'),
 });
 
@@ -39,38 +37,19 @@ export type SuggestExerciseAlternativesOutput = z.infer<
   typeof SuggestExerciseAlternativesOutputSchema
 >;
 
-// Define the tool
-const getExerciseAlternatives = ai.defineTool(
-  {
-    name: 'getExerciseAlternatives',
-    description:
-      'Suggests alternative exercises based on the user\'s preferred exercise and available equipment.',
-    inputSchema: SuggestExerciseAlternativesInputSchema,
-    outputSchema: SuggestExerciseAlternativesOutputSchema,
-  },
-  async input => {
-    // This can call any typescript function.
-    // Return suggested alternative exercises...
-    return {
-      alternativeExercises: 'Squats, Lunges, Deadlifts',
-      reasoning: 'These exercises target similar muscle groups and require minimal equipment.',
-    };
-  }
-);
-
 // Define the prompt
 const suggestExerciseAlternativesPrompt = ai.definePrompt({
   name: 'suggestExerciseAlternativesPrompt',
-  tools: [getExerciseAlternatives],
   input: {schema: SuggestExerciseAlternativesInputSchema},
   output: {schema: SuggestExerciseAlternativesOutputSchema},
-  prompt: `You are a personal trainer. A user wants to do {{{exercise}}} but does not have the required equipment.
+  prompt: `You are an expert personal trainer. A user wants an alternative to an exercise, a new workout routine, or some other fitness advice.
 
-  The user has the following equipment available: {{{availableEquipment}}}.
+  Analyze the user's request and provide a helpful response.
 
-  Here is their workout history: {{{workoutHistory}}}.
+  User's request:
+  "{{{prompt}}}"
 
-  Suggest alternative exercises they can do, taking the above into account. Use the getExerciseAlternatives tool to get the alternative exercises and reasoning.
+  Based on their request, suggest 2-4 alternative exercises and provide a clear reasoning for your suggestions. Consider the muscle groups targeted, the equipment mentioned, and the user's likely fitness level.
   `,
 });
 
@@ -89,7 +68,7 @@ const suggestExerciseAlternativesFlow = ai.defineFlow(
 
 /**
  * Suggests alternative exercises based on user input.
- * @param input - The input object containing the exercise, available equipment, and workout history.
+ * @param input - The input object containing the user's prompt.
  * @returns A promise that resolves to an object containing the alternative exercises and reasoning.
  */
 export async function suggestExerciseAlternatives(
@@ -97,4 +76,3 @@ export async function suggestExerciseAlternatives(
 ): Promise<SuggestExerciseAlternativesOutput> {
   return suggestExerciseAlternativesFlow(input);
 }
-

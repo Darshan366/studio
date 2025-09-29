@@ -60,14 +60,9 @@ export default function AiSuggestionForm() {
     setIsLoading(true);
     setResult(null);
 
-    // We'll pass the single prompt to the AI.
-    // A more advanced implementation might parse this into structured data first.
-    // For now, we'll make assumptions in the AI flow.
     try {
       const output = await suggestExerciseAlternatives({
-        exercise: values.prompt, // Pass the whole prompt
-        availableEquipment: 'user prompt', // Indicate that details are in the prompt
-        workoutHistory: 'user prompt',
+        prompt: values.prompt,
       });
       setResult(output);
     } catch (error) {
