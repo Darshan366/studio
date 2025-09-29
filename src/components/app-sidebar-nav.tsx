@@ -9,6 +9,7 @@ import {
   BarChart3,
   Bot,
   Settings,
+  Users,
 } from 'lucide-react';
 import {
   SidebarMenu,
@@ -21,6 +22,7 @@ const navItems = [
   { href: '/workouts', label: 'Workout Log', icon: BookText },
   { href: '/schedule', label: 'Schedule', icon: Calendar },
   { href: '/progress', label: 'Progress', icon: BarChart3 },
+  { href: '/matching', label: 'Matching', icon: Users },
   { href: '/ai-suggestions', label: 'AI Suggestions', icon: Bot },
 ];
 
