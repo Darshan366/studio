@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   BookText,
@@ -25,6 +25,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useAuth } from '@/hooks/use-auth';
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -37,30 +40,43 @@ const navItems = [
 ];
 
 export function UserMenu() {
+  const { user } = useAuth();
+  const router = useRouter();
   const userAvatar = PlaceHolderImages.find((img) => img.id === 'user-avatar');
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push('/login');
+  };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            {userAvatar && (
+            {userAvatar && user?.photoURL ? (
               <AvatarImage
+                src={user.photoURL}
+                alt={user.displayName || 'User avatar'}
+                data-ai-hint={userAvatar.imageHint}
+              />
+            ) : (
+               userAvatar && <AvatarImage
                 src={userAvatar.imageUrl}
                 alt="User avatar"
                 data-ai-hint={userAvatar.imageHint}
               />
             )}
-            <AvatarFallback>A</AvatarFallback>
+            <AvatarFallback>{user?.displayName?.charAt(0) || 'A'}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">Alex</p>
+            <p className="text-sm font-medium leading-none">{user?.displayName}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              alex@example.com
+              {user?.email}
             </p>
           </div>
         </DropdownMenuLabel>
@@ -76,7 +92,7 @@ export function UserMenu() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>Log out</span>
         </DropdownMenuItem>
@@ -89,6 +105,10 @@ export default function AppHeader() {
   const pathname = usePathname();
   const title =
     navItems.find((item) => item.href === pathname)?.label || 'Dashboard';
+    const { user } = useAuth();
+
+
+  if (!user) return null;
 
   return (
     <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">

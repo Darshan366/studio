@@ -1,8 +1,12 @@
 import { Dumbbell } from 'lucide-react';
 import { SidebarHeader } from '@/components/ui/sidebar';
 import AppSidebarNav from './app-sidebar-nav';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function AppSidebar() {
+  const { user } = useAuth();
+  if (!user) return null;
+  
   return (
     <>
       <SidebarHeader className="border-b">

@@ -9,6 +9,8 @@ import {
 } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
 import AppHeader from '@/components/app-header';
+import { AuthProvider, AuthLayout } from '@/hooks/use-auth';
+import { Loader2 } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'GymFlow',
@@ -31,16 +33,20 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <SidebarProvider defaultOpen>
-          <Sidebar collapsible="icon" variant="sidebar" side="left">
-            <AppSidebar />
-            <SidebarRail />
-          </Sidebar>
-          <SidebarInset>
-            <AppHeader />
-            <main className="flex-1 p-4 lg:p-6">{children}</main>
-          </SidebarInset>
-        </SidebarProvider>
+        <AuthProvider>
+            <AuthLayout>
+              <SidebarProvider defaultOpen>
+                <Sidebar collapsible="icon" variant="sidebar" side="left">
+                  <AppSidebar />
+                  <SidebarRail />
+                </Sidebar>
+                <SidebarInset>
+                  <AppHeader />
+                  <main className="flex-1 p-4 lg:p-6">{children}</main>
+                </SidebarInset>
+              </SidebarProvider>
+            </AuthLayout>
+        </AuthProvider>
         <Toaster />
       </body>
     </html>
