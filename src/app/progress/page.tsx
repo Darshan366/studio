@@ -1,4 +1,3 @@
-
 'use client';
 
 import Image from 'next/image';
@@ -19,6 +18,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Award, Dumbbell, PlusCircle } from 'lucide-react';
+import WeeklyProgressChart from '@/components/weekly-progress-chart';
 
 const recentWorkouts = [
   {
@@ -50,23 +50,24 @@ const personalRecords = [
 export default function ProgressPage() {
   return (
     <div className="space-y-6">
-      <div className="relative h-48 w-full overflow-hidden rounded-lg">
-        <Image
-          src="https://picsum.photos/seed/progress-banner/1200/400"
-          alt="Abstract banner"
-          className="object-cover"
-          data-ai-hint="abstract texture"
-          fill
-        />
-      </div>
-
-      <div className="space-y-2">
+       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">Progress Tracker</h1>
         <p className="text-muted-foreground">
-          Log your workouts, track your personal records, and visualize your
-          journey.
+          Visualize your journey and review your workout history.
         </p>
       </div>
+
+       <Card>
+          <CardHeader>
+            <CardTitle>Weekly Progress</CardTitle>
+            <CardDescription>
+              Total volume lifted over the last 7 days.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <WeeklyProgressChart />
+          </CardContent>
+        </Card>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
