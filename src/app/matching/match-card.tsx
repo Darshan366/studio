@@ -66,6 +66,9 @@ export default function MatchCard() {
         setProfiles(potentialMatches);
         setCurrentIndex(0);
       } catch (error) {
+        // This is a generic error catch. If it's a Firestore error,
+        // it will likely be caught by the more specific logic in useCollection/useDoc,
+        // but this is a fallback.
         console.error('Error fetching potential matches:', error);
         toast({
           variant: 'destructive',
@@ -77,13 +80,17 @@ export default function MatchCard() {
       }
     };
 
-    fetchPotentialMatches();
+    if(user && firestore) {
+      fetchPotentialMatches();
+    }
   }, [user, firestore, toast]);
 
-  const handleSwipe = async (direction: 'left' | 'right') => {
+  const handleSwipe = (direction: 'left' | 'right') => {
     if (!user || !swipesCollection || profiles.length === 0) return;
 
     const targetUser = profiles[currentIndex];
+    if (!targetUser) return;
+    
     setIsSwiping(true);
 
     const swipeData = {
