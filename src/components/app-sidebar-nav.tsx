@@ -42,7 +42,7 @@ export default function AppSidebarNav() {
   };
 
   return (
-    <div className="flex h-full flex-col justify-between p-2">
+    <div className="flex h-full flex-col justify-between">
       <SidebarMenu>
         {navItems.map((item) => (
           <SidebarMenuItem key={item.href}>
