@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useAuth, initiateEmailSignIn } from '@/firebase';
+import { useAuth } from '@/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -52,8 +53,7 @@ export default function LoginPage() {
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
     try {
-      // Use the non-blocking sign-in function
-      await auth.signInWithEmailAndPassword(data.email, data.password);
+      await signInWithEmailAndPassword(auth, data.email, data.password);
       // The AuthLayout will handle the redirect on successful login.
     } catch (error) {
        let description = 'An unexpected error occurred. Please try again.';
