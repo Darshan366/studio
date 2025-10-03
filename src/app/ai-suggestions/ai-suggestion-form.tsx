@@ -31,7 +31,6 @@ type FormValues = z.infer<typeof formSchema>;
 interface Message {
     type: 'user' | 'ai';
     text: string;
-    reasoning?: string;
 }
 
 export default function AiSuggestionForm() {
@@ -47,7 +46,7 @@ export default function AiSuggestionForm() {
         setMessages([
             {
                 type: 'ai',
-                text: `Hi ${user.displayName}! How can I help today?`,
+                text: `Hi ${user.displayName}! How can I help you today? Feel free to ask for workout ideas, exercise alternatives, or any fitness advice.`,
             }
         ]);
     }
@@ -78,7 +77,7 @@ export default function AiSuggestionForm() {
         prompt: values.prompt,
         userName: user?.displayName || 'user'
       });
-      const aiMessage: Message = { type: 'ai', text: output.alternativeExercises, reasoning: output.reasoning };
+      const aiMessage: Message = { type: 'ai', text: output.response };
       setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
       console.error(error);
@@ -95,8 +94,8 @@ export default function AiSuggestionForm() {
   };
 
   return (
-    <div className="flex h-full flex-col justify-between" ref={containerRef}>
-        <div className="flex-1 space-y-6 overflow-y-auto p-4">
+    <div className="flex h-full flex-col" >
+        <div className="flex-1 space-y-6 overflow-y-auto p-4" ref={containerRef}>
             {messages.map((message, index) => (
                 <div key={index} className={cn("flex", message.type === 'user' ? 'justify-end' : 'justify-start')}>
                     {message.type === 'user' ? (
@@ -107,16 +106,9 @@ export default function AiSuggestionForm() {
                        <div className="max-w-md space-y-4">
                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <Wand2 className="h-4 w-4" />
-                                <span>Thought</span>
+                                <span>AI Response</span>
                            </div>
                            <p className="text-foreground">{message.text}</p>
-                           {message.reasoning && (
-                                <p className="text-muted-foreground">{message.reasoning}</p>
-                           )}
-                           <div className="flex items-center gap-2">
-                                <button className="text-muted-foreground hover:text-foreground"><ThumbsUp className="h-4 w-4"/></button>
-                                <button className="text-muted-foreground hover:text-foreground"><ThumbsDown className="h-4 w-4"/></button>
-                           </div>
                        </div>
                     )}
                 </div>
@@ -144,7 +136,7 @@ export default function AiSuggestionForm() {
                     <FormItem>
                         <FormControl>
                         <Textarea
-                            placeholder="Ask, search, or make anything..."
+                            placeholder="Ask for exercise alternatives, workout plans..."
                             className="min-h-12 resize-none rounded-xl border-border/80 bg-muted/50 p-3 pr-12 text-base transition-all duration-300 ease-in-out focus:border-blue-500 focus:bg-background focus:ring-2 focus:ring-blue-500/20"
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' && !e.shiftKey) {

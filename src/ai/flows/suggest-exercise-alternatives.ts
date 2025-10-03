@@ -18,7 +18,7 @@ import {z} from 'genkit';
 
 // Define the input schema
 const SuggestExerciseAlternativesInputSchema = z.object({
-  prompt: z.string().describe('The user\'s full request for exercise suggestions.'),
+  prompt: z.string().describe("The user's full request for exercise suggestions."),
   userName: z.string().describe('The name of the user making the request.'),
 });
 
@@ -28,10 +28,9 @@ export type SuggestExerciseAlternativesInput = z.infer<
 
 // Define the output schema
 const SuggestExerciseAlternativesOutputSchema = z.object({
-  alternativeExercises: z
+  response: z
     .string()
-    .describe('A conversational and helpful response to the user\'s prompt.'),
-  reasoning: z.string().describe('The AI reasoning for suggesting these alternatives. This can be a continuation of the response.'),
+    .describe("A conversational and helpful response to the user's prompt."),
 });
 
 export type SuggestExerciseAlternativesOutput = z.infer<
@@ -43,14 +42,11 @@ const suggestExerciseAlternativesPrompt = ai.definePrompt({
   name: 'suggestExerciseAlternativesPrompt',
   input: {schema: SuggestExerciseAlternativesInputSchema},
   output: {schema: SuggestExerciseAlternativesOutputSchema},
-  prompt: `You are an expert personal trainer. A user named {{{userName}}} wants an alternative to an exercise, a new workout routine, or some other fitness advice.
+  prompt: `You are a friendly and expert personal trainer. A user named {{{userName}}} is asking for fitness advice.
 
-  Analyze the user's request and provide a helpful, conversational response.
+  Their request is: "{{{prompt}}}"
 
-  User's request:
-  "{{{prompt}}}"
-
-  Based on their request, provide a response that might include alternative exercises and a clear reasoning for your suggestions. Consider the muscle groups targeted, the equipment mentioned, and the user's likely fitness level. Keep the response friendly and engaging.
+  Provide a helpful, encouraging, and conversational response to their request. If they ask for alternatives, provide them with clear reasoning.
   `,
 });
 
