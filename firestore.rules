@@ -1,16 +1,35 @@
+/**
+ * @file Firestore Security Rules for GymFlow's mutual matching system.
+ *
+ * @corePhilosophy This ruleset enforces a role-based access control model for conversations and matches,
+ *                 and owner-only access for swipes. Only authenticated users can create swipes,
+ *                 while match and conversation creation is exclusively handled by a trusted server environment
+ *                 (e.g., Cloud Functions).
+ *
+ * @dataStructure The data is organized into top-level collections for swipes, matches, and conversations.
+ *                Each conversation contains a subcollection of messages.
+ *                Authorization data (the `users` array) is denormalized into the `conversations` collection
+ *                to avoid costly `get()` calls in the security rules.
+ *
+ * @keySecurityDecisions
+ *   - Clients are explicitly denied write access to the `matches` and `conversations` collections.
+ *   - Read and write access to conversations and messages is strictly limited to users who are members of the conversation.
+ *
+ * @denormalizationForAuthorization The `conversations` document contains a `users` array,
+ *                                 which lists the UIDs of all participants. This denormalization allows
+ *                                 security rules to efficiently verify user membership without additional reads.
+ * @structuralSegregation The `matches` collection is exclusively managed by a trusted server environment.
+ */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls access to swipe data.
+     * @description Allows authenticated users to create swipe documents.
      * @path /swipes/{swipeId}
-     * @allow create: (auth != null) - Allows any authenticated user to create a swipe.
-     * @deny get: if false; -  Swipes should not be individually accessible outside of the matching process.
-     * @deny list: if false; -  Listing swipes should be denied to prevent unauthorized data access.
-     * @deny update: if true; -  Swipes should not be updated after creation.
-     * @deny delete: if true; -  Swipes cannot be deleted.
-     * @principle Limits reads on swipes and prevents modifications.
+     * @allow (create) - Authenticated user can create a swipe document.
+     * @deny (create) - Unauthenticated user cannot create a swipe document.
+     * @principle Requires user authentication for creating swipes.
      */
     match /swipes/{swipeId} {
       allow get: if false;
@@ -21,35 +40,15 @@ service cloud.firestore {
     }
 
     /**
-     * @description Controls access to match data.
+     * @description Restricts write access to the matches collection to prevent client-side creation of matches.
+     *              Read access is denied to clients. Matches are created by a trusted server environment only.
      * @path /matches/{matchId}
-     * @allow get: if true; - Allows any user to get match data.
-     * @allow list: if true; -  Allows any user to list match data.
-     * @deny create: if false; -  Matches should only be created by a trusted backend.
-     * @deny update: if true; -  Matches should not be updated after creation.
-     * @deny delete: if true; -  Matches should not be deleted.
-     * @principle Restricts match modification and deletion.
+     * @allow None - Clients cannot read or write match documents.
+     * @deny (create, update, delete) - Clients cannot create, update, or delete match documents.
+     * @principle Prevents unauthorized match creation by restricting write access to a trusted server environment.
      */
     match /matches/{matchId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
-    }
-
-    /**
-     * @description Controls access to conversation metadata.
-     * @path /conversations/{conversationId}
-     * @allow get: if isParticipant(resource.data.userAId, resource.data.userBId); - Allows participants to get conversation metadata.
-     * @allow list: if false; -  Listing conversations is disallowed for privacy.
-     * @deny create: if false; -  Conversations should only be created by a trusted backend.
-     * @deny update: if !isExistingParticipant(resource.data.userAId, resource.data.userBId); - Prevents non-participants from updating conversation metadata.
-     * @deny delete: if true; -  Conversations should not be deleted.
-     * @principle Enforces participant-only access to conversation metadata.
-     */
-    match /conversations/{conversationId} {
-      allow get: if exists(/databases/$(database)/documents/matches/{conversationId}) && isParticipant(get(/databases/$(database)/documents/matches/{conversationId}).data.userAId, get(/databases/$(database)/documents/matches/{conversationId}).data.userBId);
+      allow get: if false;
       allow list: if false;
       allow create: if false;
       allow update: if false;
@@ -57,37 +56,57 @@ service cloud.firestore {
     }
 
     /**
-     * @description Controls access to individual messages within a conversation.
-     * @path /conversations/{conversationId}/messages/{messageId}
-     * @allow get: if isParticipant(get(/databases/$(database)/documents/matches/{conversationId}).data.userAId, get(/databases/$(database)/documents/matches/{conversationId}).data.userBId); - Allows participants to read messages.
-     * @allow list: if isParticipant(get(/databases/$(database)/documents/matches/{conversationId}).data.userAId, get(/databases/$(database)/documents/matches/{conversationId}).data.userBId); - Allows participants to list messages.
-     * @allow create: if isSignedIn() && isParticipant(get(/databases/$(database)/documents/matches/{conversationId}).data.userAId, get(/databases/$(database)/documents/matches/{conversationId}).data.userBId) && request.auth.uid == request.resource.data.senderId; - Allows participants to create messages.
-     * @deny update: if true; -  Messages should not be updated after creation.
-     * @deny delete: if true; -  Messages should not be deleted.
-     * @principle Enforces participant-only access to messages within a conversation.
+     * @description Restricts read and write access to conversations to only users who are members of the conversation.
+     *              Conversation documents contain a `users` array, which is used to verify membership.
+     *              Write access is further restricted to prevent client-side modification.
+     * @path /conversations/{matchId}
+     * @allow (get, list) - User can read a conversation if they are in the `users` array.
+     * @deny (get, list) - User cannot read a conversation if they are not in the `users` array.
+     * @deny (create, update, delete) - Clients cannot create, update, or delete conversations.
+     * @principle Enforces conversation membership for access control.
      */
-    match /conversations/{conversationId}/messages/{messageId} {
-      allow get: if exists(/databases/$(database)/documents/matches/{conversationId}) && isParticipant(get(/databases/$(database)/documents/matches/{conversationId}).data.userAId, get(/databases/$(database)/documents/matches/{conversationId}).data.userBId);
+    match /conversations/{matchId} {
+      allow get: if isConversationMember(resource.data.users);
       allow list: if false;
-      allow create: if isSignedIn() && exists(/databases/$(database)/documents/matches/{conversationId}) && isParticipant(get(/databases/$(database)/documents/matches/{conversationId}).data.userAId, get(/databases/$(database)/documents/matches/{conversationId}).data.userBId) && request.auth.uid == request.resource.data.senderId;
+      allow create: if false;
       allow update: if false;
       allow delete: if false;
     }
 
+    /**
+     * @description Restricts read and write access to messages within a conversation to only users who are members of that conversation.
+     *              Access is determined by the `users` array in the parent `conversation` document.
+     * @path /conversations/{matchId}/messages/{messageId}
+     * @allow (create) - User can create a message if they are in the `users` array of the parent conversation.
+     * @allow (get, list) - User can read messages if they are in the `users` array of the parent conversation.
+     * @deny (create, get, list) - User cannot create, get, or list messages if they are not in the `users` array of the parent conversation.
+     * @principle Enforces conversation membership for message access control.
+     */
+    match /conversations/{matchId}/messages/{messageId} {
+      allow get: if isConversationMember(get(/databases/$(database)/documents/conversations/$(matchId)).data.users);
+      allow list: if isConversationMember(get(/databases/$(database)/documents/conversations/$(matchId)).data.users);
+      allow create: if isConversationMember(get(/databases/$(database)/documents/conversations/$(matchId)).data.users);
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // --- Helper Functions ---
+
+    /**
+     * @description Checks if the user is signed in.
+     * @return True if the user is signed in, false otherwise.
+     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    function isParticipant(userAId, userBId) {
-        return isSignedIn() && (request.auth.uid == userAId || request.auth.uid == userBId);
-    }
-
-    function isExistingParticipant(userAId, userBId) {
-        return resource.data != null && isSignedIn() && (request.auth.uid == userAId || request.auth.uid == userBId);
+    /**
+     * @description Checks if the user is a member of the conversation.
+     * @param users An array of user IDs representing the members of the conversation.
+     * @return True if the user's UID is in the `users` array, false otherwise.
+     */
+    function isConversationMember(users) {
+        return isSignedIn() && users is list && request.auth.uid in users;
     }
   }
 }

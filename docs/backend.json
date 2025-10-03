@@ -4,66 +4,58 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Swipe",
       "type": "object",
-      "description": "Represents a user's swipe action on another user's profile.",
+      "description": "Represents a user's swipe action on another user.",
       "properties": {
-        "id": {
+        "swipeId": {
           "type": "string",
           "description": "Unique identifier for the swipe event."
         },
         "swiperId": {
           "type": "string",
-          "description": "Reference to User who initiated the swipe. (Relationship: User 1:N Swipe (as swiper))"
+          "description": "Reference to the user who initiated the swipe. (Relationship: User 1:N Swipe)"
         },
         "targetId": {
           "type": "string",
-          "description": "Reference to User who was swiped on. (Relationship: User 1:N Swipe (as target))"
+          "description": "Reference to the user who was swiped upon. (Relationship: User 1:N Swipe)"
         },
         "direction": {
           "type": "string",
-          "description": "Indicates the direction of the swipe (e.g., 'right', 'left')."
-        },
-        "timestamp": {
-          "type": "string",
-          "description": "Timestamp of when the swipe occurred.",
-          "format": "date-time"
+          "description": "The direction of the swipe (e.g., 'right', 'left')."
         }
       },
       "required": [
-        "id",
+        "swipeId",
         "swiperId",
         "targetId",
-        "direction",
-        "timestamp"
+        "direction"
       ]
     },
     "Match": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Match",
       "type": "object",
-      "description": "Represents a mutual match between two users.",
+      "description": "Represents a match between two users.",
       "properties": {
-        "id": {
+        "matchId": {
           "type": "string",
-          "description": "Unique identifier for the match."
+          "description": "Unique identifier for the match (e.g., userA_userB to ensure uniqueness)."
         },
-        "userAId": {
-          "type": "string",
-          "description": "Reference to User A in the match. (Relationship: User 1:N Match (as User A))"
-        },
-        "userBId": {
-          "type": "string",
-          "description": "Reference to User B in the match. (Relationship: User 1:N Match (as User B))"
+        "users": {
+          "type": "array",
+          "description": "An array containing the IDs of the two matched users.",
+          "items": {
+            "type": "string"
+          }
         },
         "createdAt": {
           "type": "string",
-          "description": "Timestamp of when the match was created.",
+          "description": "Timestamp indicating when the match was created.",
           "format": "date-time"
         }
       },
       "required": [
-        "id",
-        "userAId",
-        "userBId",
+        "matchId",
+        "users",
         "createdAt"
       ]
     },
@@ -73,32 +65,30 @@
       "type": "object",
       "description": "Represents a conversation between two matched users.",
       "properties": {
-        "id": {
+        "matchId": {
           "type": "string",
-          "description": "Unique identifier for the conversation. This is the same as the Match ID."
+          "description": "Reference to the Match entity. (Relationship: Match 1:1 Conversation)"
         },
-        "userAId": {
-          "type": "string",
-          "description": "Reference to User A in the conversation. (Relationship: User 1:N Conversation (as User A))"
-        },
-        "userBId": {
-          "type": "string",
-          "description": "Reference to User B in the conversation. (Relationship: User 1:N Conversation (as User B))"
+        "users": {
+          "type": "array",
+          "description": "An array containing the IDs of the users participating in the conversation.",
+          "items": {
+            "type": "string"
+          }
         },
         "lastMessage": {
           "type": "string",
-          "description": "The content of the most recent message in the conversation."
+          "description": "The content of the last message sent in the conversation."
         },
         "updatedAt": {
           "type": "string",
-          "description": "Timestamp of the last activity (new message) in the conversation.",
+          "description": "Timestamp indicating when the conversation was last updated (e.g., new message sent).",
           "format": "date-time"
         }
       },
       "required": [
-        "id",
-        "userAId",
-        "userBId",
+        "matchId",
+        "users",
         "lastMessage",
         "updatedAt"
       ]
@@ -109,33 +99,28 @@
       "type": "object",
       "description": "Represents a single message within a conversation.",
       "properties": {
-        "id": {
+        "messageId": {
           "type": "string",
           "description": "Unique identifier for the message."
         },
-        "conversationId": {
-          "type": "string",
-          "description": "Reference to Conversation to which this message belongs. (Relationship: Conversation 1:N Message)"
-        },
         "senderId": {
           "type": "string",
-          "description": "Reference to User who sent the message. (Relationship: User 1:N Message (as sender))"
+          "description": "Reference to the user who sent the message. (Relationship: User 1:N Message)"
         },
-        "text": {
+        "content": {
           "type": "string",
-          "description": "The content of the message."
+          "description": "The text content of the message."
         },
         "timestamp": {
           "type": "string",
-          "description": "Timestamp of when the message was sent.",
+          "description": "Timestamp indicating when the message was sent.",
           "format": "date-time"
         }
       },
       "required": [
-        "id",
-        "conversationId",
+        "messageId",
         "senderId",
-        "text",
+        "content",
         "timestamp"
       ]
     }
@@ -155,7 +140,7 @@
           "schema": {
             "$ref": "#/backend/entities/Swipe"
           },
-          "description": "Stores swipe data for each user. Used to determine matches. Includes swiperId and targetId for identifying the users involved in the swipe.",
+          "description": "Stores swipe data initiated by users.  Allows authenticated users to create swipe documents.",
           "params": [
             {
               "name": "swipeId",
@@ -171,43 +156,43 @@
           "schema": {
             "$ref": "#/backend/entities/Match"
           },
-          "description": "Stores confirmed matches between users. Includes userAId and userBId for authorization independence in conversations.",
+          "description": "Stores match data.  Matches are created by a Cloud Function only. Clients cannot directly write to this collection. `matchId` is deterministic to prevent duplicates.",
           "params": [
             {
               "name": "matchId",
-              "description": "Unique identifier for the match."
+              "description": "Unique identifier for the match (e.g., userA_userB)."
             }
           ]
         }
       },
       {
-        "path": "/conversations/{conversationId}",
+        "path": "/conversations/{matchId}",
         "definition": {
           "entityName": "Conversation",
           "schema": {
             "$ref": "#/backend/entities/Conversation"
           },
-          "description": "Stores conversation metadata. conversationId is the same as matchId. Includes userAId and userBId, denormalized from the Match document, to enforce authorization independence.",
+          "description": "Stores conversation metadata. Includes denormalized 'users' array for authorization independence. Clients cannot write here directly; a Cloud Function manages creation and updates.",
           "params": [
             {
-              "name": "conversationId",
-              "description": "Unique identifier for the conversation, which is the same as the matchId."
+              "name": "matchId",
+              "description": "Reference to the Match document for this conversation."
             }
           ]
         }
       },
       {
-        "path": "/conversations/{conversationId}/messages/{messageId}",
+        "path": "/conversations/{matchId}/messages/{messageId}",
         "definition": {
           "entityName": "Message",
           "schema": {
             "$ref": "#/backend/entities/Message"
           },
-          "description": "Stores individual messages within a conversation. The conversationId ensures messages are scoped to the correct conversation, enforcing access control.",
+          "description": "Stores individual messages within a conversation.  Access is controlled by the parent conversation's 'users' array.",
           "params": [
             {
-              "name": "conversationId",
-              "description": "Unique identifier for the conversation to which the message belongs."
+              "name": "matchId",
+              "description": "Reference to the parent Conversation document."
             },
             {
               "name": "messageId",
@@ -217,6 +202,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support a mutual matching system for the GymFlow app, ensuring secure and scalable data management while adhering to the core design principles. Authorization Independence is achieved through denormalization. Specifically, the `Match` document stores `userAId` and `userBId`. This allows security rules in the `conversations` collection and `messages` subcollection to validate user access based on the match data, without needing to perform `get()` operations on the `users` collection. The structure supports QAPs through structural segregation and the use of path-based ownership. The `swipes` collection stores swipe data, which is used to determine matches. The `matches` collection stores confirmed matches. Conversations are stored in the `conversations` collection, with messages stored in a subcollection, ensuring only matched users can access conversation data. This segregation simplifies security rules and prevents unauthorized access. Path-based ownership is used for conversations and messages, where the conversation ID acts as the match ID, further simplifying security rules."
+    "reasoning": "The Firestore structure is designed to support a mutual matching system with secure conversations. It prioritizes authorization independence and clear security rules.\n\n*   `/swipes/{swipeId}`: Stores swipe data. Security rules will ensure only authenticated users can create swipes.\n*   `/matches/{matchId}`: Stores match data, created by a Cloud Function.  The `matchId` is deterministic to prevent duplicates. Clients cannot directly write here, ensuring matches are only created when mutual swipes occur.\n*   `/conversations/{matchId}`: Stores conversation metadata. Clients cannot write here directly; a Cloud Function manages creation and updates based on messages. The `users` array is denormalized here for efficient querying and security rule enforcement. Security rules ensure only users within the `users` array can read or write to the conversation.\n*   `/conversations/{matchId}/messages/{messageId}`: Stores individual messages within a conversation. Security rules ensure that only users participating in the conversation can read or write messages.\n\n**Authorization Independence & QAPs:**\n\nAuthorization independence is achieved by storing the `users` array (member list) directly within the `conversations` document. This eliminates the need for `get()` calls in security rules to verify user membership, enabling atomic operations. This structure also supports the required QAPs (Rules are not Filters) because list operations on `/conversations/{matchId}/messages` can be secured by directly checking the `request.auth.uid` against the `users` array in the parent `conversation` document, without needing to filter based on message content or sender."
   }
 }
