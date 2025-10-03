@@ -1,19 +1,14 @@
-
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import {
   collection,
   addDoc,
-  onSnapshot,
+  serverTimestamp,
   query,
   orderBy,
   Timestamp,
-  where,
-  getDocs,
-  limit,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useAuth } from '@/hooks/use-auth';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 
 import {
   Card,
@@ -28,10 +23,12 @@ import { Send, Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface Conversation {
-  id: number;
+  id: string; // matchId
   name: string;
+  otherUserId: string;
 }
 
 interface Message {
@@ -45,51 +42,35 @@ interface ChatWindowProps {
   conversation: Conversation;
 }
 
-// A simple representation of another user. In a real app, this would come from your user database.
-const otherUser = {
-  id: 'jessica_id', // A static ID for the other user for this example
-  name: 'Jessica',
-};
-
-
 export default function ChatWindow({ conversation }: ChatWindowProps) {
-  const { user } = useAuth();
+  const { user } = useUser();
+  const firestore = useFirestore();
   const { toast } = useToast();
-  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(true);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  const getChatId = (uid1: string, uid2: string) => {
-    return [uid1, uid2].sort().join('_');
-  };
+  const messagesCollectionRef = useMemoFirebase(() => {
+    if (!firestore || !conversation) return null;
+    return collection(firestore, 'conversations', conversation.id, 'messages');
+  }, [firestore, conversation]);
 
+  const messagesQuery = useMemoFirebase(() => {
+    if (!messagesCollectionRef) return null;
+    return query(messagesCollectionRef, orderBy('timestamp', 'asc'));
+  }, [messagesCollectionRef]);
+
+  const { data: messages, isLoading: loading, error } = useCollection<Message>(messagesQuery);
+  
   useEffect(() => {
-    if (!user) return;
-
-    const chatId = getChatId(user.uid, otherUser.id);
-    const messagesCollection = collection(db, 'chats', chatId, 'messages');
-    const q = query(messagesCollection, orderBy('timestamp', 'asc'));
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const msgs: Message[] = [];
-      querySnapshot.forEach((doc) => {
-        msgs.push({ id: doc.id, ...doc.data() } as Message);
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not load messages.",
       });
-      setMessages(msgs);
-      setLoading(false);
-    }, (error) => {
-        console.error("Error fetching messages:", error);
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Could not load messages.",
-        });
-        setLoading(false);
-    });
+    }
+  }, [error, toast]);
 
-    return () => unsubscribe();
-  }, [user, toast]);
 
   useEffect(() => {
     // Scroll to the bottom when messages change
@@ -104,26 +85,14 @@ export default function ChatWindow({ conversation }: ChatWindowProps) {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newMessage.trim() === '' || !user) return;
+    if (newMessage.trim() === '' || !user || !messagesCollectionRef) return;
 
-    const chatId = getChatId(user.uid, otherUser.id);
-    const messagesCollection = collection(db, 'chats', chatId, 'messages');
-
-    try {
-        await addDoc(messagesCollection, {
-            text: newMessage,
-            senderId: user.uid,
-            timestamp: Timestamp.now(),
-        });
-        setNewMessage('');
-    } catch (error) {
-        console.error("Error sending message:", error);
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Could not send message.",
-        });
-    }
+    addDocumentNonBlocking(messagesCollectionRef, {
+        text: newMessage,
+        senderId: user.uid,
+        timestamp: serverTimestamp(),
+    });
+    setNewMessage('');
   };
 
   return (
@@ -143,12 +112,12 @@ export default function ChatWindow({ conversation }: ChatWindowProps) {
                         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
                 )}
-                {!loading && messages.length === 0 && (
+                {!loading && messages && messages.length === 0 && (
                     <div className="flex justify-center items-center h-full">
                         <p className="text-muted-foreground">No messages yet. Say hello!</p>
                     </div>
                 )}
-                {messages.map((message) => (
+                {messages && messages.map((message) => (
                     <div
                     key={message.id}
                     className={cn(
@@ -165,9 +134,11 @@ export default function ChatWindow({ conversation }: ChatWindowProps) {
                         )}
                     >
                         <p>{message.text}</p>
-                        <p className="mt-1 text-xs text-right opacity-70">
-                            {message.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </p>
+                        {message.timestamp && (
+                          <p className="mt-1 text-xs text-right opacity-70">
+                              {message.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        )}
                     </div>
                     </div>
                 ))}

@@ -1,4 +1,3 @@
-// src/app/signup/page.tsx
 'use client';
 
 import { useState } from 'react';
@@ -8,8 +7,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { doc } from 'firebase/firestore';
+import { useAuth, useFirestore } from '@/firebase';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -36,6 +36,8 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { FirebaseError } from 'firebase/app';
+
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -50,6 +52,8 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function SignupPage() {
   const router = useRouter();
+  const auth = useAuth();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -77,23 +81,32 @@ export default function SignupPage() {
         displayName: data.name,
       });
 
-      await setDoc(doc(db, 'users', user.uid), {
+      const userDocRef = doc(firestore, 'users', user.uid);
+      
+      setDocumentNonBlocking(userDocRef, {
         uid: user.uid,
         name: data.name,
         email: data.email,
         fitnessLevel: data.fitnessLevel,
         createdAt: new Date(),
-      });
+      }, { merge: true });
 
-      router.push('/');
+      // The AuthLayout will handle redirecting the user to the home page
     } catch (error) {
-      console.error('Signup error', error);
-      toast({
-        variant: 'destructive',
-        title: 'Sign Up Failed',
-        description: 'An error occurred. Please try again.',
-      });
-      setIsLoading(false);
+       let description = 'An unexpected error occurred. Please try again.';
+       if (error instanceof FirebaseError) {
+         if (error.code === 'auth/email-already-in-use') {
+            description = 'This email is already in use. Please login or use a different email.';
+         }
+       }
+        console.error('Signup error', error);
+        toast({
+            variant: 'destructive',
+            title: 'Sign Up Failed',
+            description,
+        });
+    } finally {
+        setIsLoading(false);
     }
   };
 

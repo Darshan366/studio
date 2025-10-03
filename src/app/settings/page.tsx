@@ -1,4 +1,3 @@
-// src/app/settings/page.tsx
 'use client';
 
 import { Button } from "@/components/ui/button"
@@ -15,17 +14,15 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
-import { useAuth } from "@/hooks/use-auth"
+import { useUser, useAuth, useFirebaseApp } from "@/firebase"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { PlaceHolderImages } from "@/lib/placeholder-images"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage"
-import { auth, storage } from "@/lib/firebase"
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage"
 import { updateProfile } from "firebase/auth"
 import { useToast } from "@/hooks/use-toast"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Loader2, User } from "lucide-react"
 
 const profileFormSchema = z.object({
@@ -36,13 +33,15 @@ const profileFormSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 export default function SettingsPage() {
-    const { user, loading } = useAuth();
+    const { user, isUserLoading } = useUser();
+    const auth = useAuth();
+    const app = useFirebaseApp();
+    const storage = getStorage(app);
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const userAvatar = PlaceHolderImages.find((img) => img.id === 'user-avatar');
-
+    
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
         values: {
@@ -50,6 +49,15 @@ export default function SettingsPage() {
             email: user?.email || '',
         },
     });
+
+    useEffect(() => {
+        if(user) {
+            form.reset({
+                name: user.displayName || '',
+                email: user.email || '',
+            });
+        }
+    }, [user, form]);
 
     const handleAvatarClick = () => {
         fileInputRef.current?.click();
@@ -71,11 +79,7 @@ export default function SettingsPage() {
                 title: "Avatar Updated",
                 description: "Your new avatar has been saved.",
             });
-             // Force a reload of the user to get the new photoURL
-            await auth.currentUser?.reload();
-            // This will trigger a re-render in components using useAuth
-            window.dispatchEvent(new Event('auth-change'));
-
+            // This will trigger re-render in components using useUser
         } catch (error) {
             console.error("Error uploading avatar:", error);
             toast({
@@ -101,7 +105,6 @@ export default function SettingsPage() {
                 title: "Profile Updated",
                 description: "Your profile information has been saved.",
             });
-            window.dispatchEvent(new Event('auth-change'));
         } catch (error) {
             console.error("Error updating profile:", error);
             toast({
@@ -141,7 +144,7 @@ export default function SettingsPage() {
                  <div className="flex items-center gap-4">
                     <div className="relative">
                         <Avatar className="h-20 w-20 cursor-pointer" onClick={handleAvatarClick}>
-                            <AvatarImage src={user?.photoURL || userAvatar?.imageUrl} alt="User avatar" />
+                            <AvatarImage src={user?.photoURL || 'https://picsum.photos/seed/user-avatar/200/200'} alt="User avatar" />
                             <AvatarFallback>
                                 {isUploading ? <Loader2 className="animate-spin" /> : <User />}
                             </AvatarFallback>
@@ -174,8 +177,8 @@ export default function SettingsPage() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                <Button type="submit" disabled={isSubmitting || isUserLoading}>
+                    {(isSubmitting || isUserLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                     Save Changes
                 </Button>
               </CardFooter>

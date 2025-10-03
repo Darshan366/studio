@@ -1,3 +1,5 @@
+// src/app/page.tsx
+'use client';
 import {
   Activity,
   Calendar,
@@ -15,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import WeeklyProgressChart from '@/components/weekly-progress-chart';
+import { useUser } from '@/firebase';
 
 const quickStats = [
   {
@@ -50,10 +53,12 @@ const todaysWorkout = {
 };
 
 export default function DashboardPage() {
+  const { user } = useUser();
+
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">Welcome back, Alex!</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Welcome back, {user?.displayName || 'Alex'}!</h1>
         <p className="text-muted-foreground">
           Here&apos;s a look at your progress and what&apos;s scheduled for today.
         </p>

@@ -1,4 +1,3 @@
-// src/app/login/page.tsx
 'use client';
 
 import { useState } from 'react';
@@ -7,8 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { useAuth, initiateEmailSignIn } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -28,6 +26,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { FirebaseError } from 'firebase/app';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -38,6 +37,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const auth = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -52,16 +52,31 @@ export default function LoginPage() {
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
-      router.push('/');
+      // Use the non-blocking sign-in function
+      await auth.signInWithEmailAndPassword(data.email, data.password);
+      // The AuthLayout will handle the redirect on successful login.
     } catch (error) {
-      console.error('Login error', error);
-      toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: 'Invalid email or password. Please try again.',
-      });
-      setIsLoading(false);
+       let description = 'An unexpected error occurred. Please try again.';
+       if (error instanceof FirebaseError) {
+         switch (error.code) {
+           case 'auth/user-not-found':
+           case 'auth/wrong-password':
+           case 'auth/invalid-credential':
+             description = 'Invalid email or password. Please try again.';
+             break;
+           default:
+             description = 'Failed to login. Please try again later.';
+             break;
+         }
+       }
+        console.error('Login error', error);
+        toast({
+            variant: 'destructive',
+            title: 'Login Failed',
+            description,
+        });
+    } finally {
+        setIsLoading(false);
     }
   };
 

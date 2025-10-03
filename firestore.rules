@@ -1,35 +1,45 @@
 /**
- * @file Firestore Security Rules for GymFlow's mutual matching system.
+ * @fileOverview Firestore Security Rules for a mutual matching application.
  *
- * @corePhilosophy This ruleset enforces a role-based access control model for conversations and matches,
- *                 and owner-only access for swipes. Only authenticated users can create swipes,
- *                 while match and conversation creation is exclusively handled by a trusted server environment
- *                 (e.g., Cloud Functions).
+ * Core Philosophy:
+ * This ruleset prioritizes secure data access based on user authentication and explicit authorization.
+ * Clients are generally prevented from writing directly to collections that manage matches or conversations;
+ * these are handled by backend functions to maintain data integrity. The rules leverage denormalization of user
+ * data (specifically, storing user lists directly in conversation documents) to achieve authorization independence
+ * and improve performance.
  *
- * @dataStructure The data is organized into top-level collections for swipes, matches, and conversations.
- *                Each conversation contains a subcollection of messages.
- *                Authorization data (the `users` array) is denormalized into the `conversations` collection
- *                to avoid costly `get()` calls in the security rules.
+ * Data Structure:
+ * - /swipes/{swipeId}: Stores individual swipe actions performed by users.
+ * - /matches/{matchId}: Stores match information between two users.  Match creation and updates are handled by a backend.
+ * - /conversations/{matchId}: Stores conversation metadata, including a denormalized list of participating user IDs.
+ * - /conversations/{matchId}/messages/{messageId}: Stores individual messages within a conversation.
  *
- * @keySecurityDecisions
- *   - Clients are explicitly denied write access to the `matches` and `conversations` collections.
- *   - Read and write access to conversations and messages is strictly limited to users who are members of the conversation.
+ * Key Security Decisions:
+ * - Clients can create swipes.
+ * - Clients cannot directly create, update, or delete matches or conversations; these are managed by backend functions.
+ * - Authorization for conversations and messages is based on a denormalized `users` array within the conversation document.
+ * - Listing of messages is only allowed within the context of a specific conversation.
  *
- * @denormalizationForAuthorization The `conversations` document contains a `users` array,
- *                                 which lists the UIDs of all participants. This denormalization allows
- *                                 security rules to efficiently verify user membership without additional reads.
- * @structuralSegregation The `matches` collection is exclusively managed by a trusted server environment.
+ * Denormalization for Authorization:
+ * The `conversations` document includes a `users` array containing the UIDs of the participants. This denormalization
+ * allows security rules for messages to efficiently verify user access without requiring additional `get()` operations
+ * to fetch user membership information.
+ *
+ * Structural Segregation:
+ * The application uses distinct collections for swipes, matches, conversations, and messages.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Allows authenticated users to create swipe documents.
+     * @description Controls access to swipe documents.  Authenticated users can create swipe documents.
      * @path /swipes/{swipeId}
-     * @allow (create) - Authenticated user can create a swipe document.
-     * @deny (create) - Unauthenticated user cannot create a swipe document.
-     * @principle Requires user authentication for creating swipes.
+     * @allow (create) - An authenticated user can create a swipe document.
+     *   Example: request.auth.uid = 'user123'; request.resource.data.swiperId = 'user123'
+     * @deny (create) - An unauthenticated user attempts to create a swipe document.
+     *   Example: request.auth == null
+     * @principle Allows authenticated users to create swipe data.
      */
     match /swipes/{swipeId} {
       allow get: if false;
@@ -40,12 +50,12 @@ service cloud.firestore {
     }
 
     /**
-     * @description Restricts write access to the matches collection to prevent client-side creation of matches.
-     *              Read access is denied to clients. Matches are created by a trusted server environment only.
+     * @description Controls access to match documents. Matches are managed by a Cloud Function, not clients.
      * @path /matches/{matchId}
-     * @allow None - Clients cannot read or write match documents.
-     * @deny (create, update, delete) - Clients cannot create, update, or delete match documents.
-     * @principle Prevents unauthorized match creation by restricting write access to a trusted server environment.
+     * @allow (get) - No direct client access allowed.
+     * @deny (create) - Any client attempting to create a match document.
+     *   Example: request.auth.uid = 'user123'
+     * @principle Restricts client-side creation of matches to ensure data integrity.
      */
     match /matches/{matchId} {
       allow get: if false;
@@ -56,17 +66,15 @@ service cloud.firestore {
     }
 
     /**
-     * @description Restricts read and write access to conversations to only users who are members of the conversation.
-     *              Conversation documents contain a `users` array, which is used to verify membership.
-     *              Write access is further restricted to prevent client-side modification.
+     * @description Controls access to conversation documents.  Conversations are managed by a Cloud Function, not clients.
      * @path /conversations/{matchId}
-     * @allow (get, list) - User can read a conversation if they are in the `users` array.
-     * @deny (get, list) - User cannot read a conversation if they are not in the `users` array.
-     * @deny (create, update, delete) - Clients cannot create, update, or delete conversations.
-     * @principle Enforces conversation membership for access control.
+     * @allow (get) - No direct client access allowed.
+     * @deny (create) - Any client attempting to create a conversation document.
+     *   Example: request.auth.uid = 'user123'
+     * @principle Restricts client-side creation of conversations to ensure data integrity.
      */
     match /conversations/{matchId} {
-      allow get: if isConversationMember(resource.data.users);
+      allow get: if false;
       allow list: if false;
       allow create: if false;
       allow update: if false;
@@ -74,18 +82,20 @@ service cloud.firestore {
     }
 
     /**
-     * @description Restricts read and write access to messages within a conversation to only users who are members of that conversation.
-     *              Access is determined by the `users` array in the parent `conversation` document.
+     * @description Controls access to message documents within a conversation. Only users in the conversation can read/write.
      * @path /conversations/{matchId}/messages/{messageId}
-     * @allow (create) - User can create a message if they are in the `users` array of the parent conversation.
-     * @allow (get, list) - User can read messages if they are in the `users` array of the parent conversation.
-     * @deny (create, get, list) - User cannot create, get, or list messages if they are not in the `users` array of the parent conversation.
-     * @principle Enforces conversation membership for message access control.
+     * @allow (create) - A user in the conversation creates a new message.
+     *   Example: request.auth.uid = 'user123', conversation.data.users = ['user123', 'user456']
+     * @deny (create) - A user not in the conversation attempts to create a message.
+     *   Example: request.auth.uid = 'user789', conversation.data.users = ['user123', 'user456']
+     * @allow (list) - A user in the conversation lists messages.
+     * @deny (list) - A user not in the conversation attempts to list messages.
+     * @principle Enforces conversation-based access control for messages.
      */
     match /conversations/{matchId}/messages/{messageId} {
-      allow get: if isConversationMember(get(/databases/$(database)/documents/conversations/$(matchId)).data.users);
-      allow list: if isConversationMember(get(/databases/$(database)/documents/conversations/$(matchId)).data.users);
-      allow create: if isConversationMember(get(/databases/$(database)/documents/conversations/$(matchId)).data.users);
+      allow get: if false;
+      allow list: if conversationContainsUser(matchId, request.auth.uid);
+      allow create: if conversationContainsUser(matchId, request.auth.uid);
       allow update: if false;
       allow delete: if false;
     }
@@ -94,19 +104,20 @@ service cloud.firestore {
 
     /**
      * @description Checks if the user is signed in.
-     * @return True if the user is signed in, false otherwise.
+     * @return {boolean} True if the user is signed in, false otherwise.
      */
     function isSignedIn() {
       return request.auth != null;
     }
 
     /**
-     * @description Checks if the user is a member of the conversation.
-     * @param users An array of user IDs representing the members of the conversation.
-     * @return True if the user's UID is in the `users` array, false otherwise.
+     * @description Checks if the conversation document at the given path contains the specified user ID in its 'users' array.
+     * @param {string} matchId The ID of the match, corresponding to the conversation document.
+     * @param {string} userId The ID of the user to check for.
+     * @return {boolean} True if the user is in the conversation, false otherwise.
      */
-    function isConversationMember(users) {
-        return isSignedIn() && users is list && request.auth.uid in users;
+    function conversationContainsUser(matchId, userId) {
+      return get(/databases/$(database)/documents/conversations/$(matchId)).data.users.hasAny([userId]);
     }
   }
 }

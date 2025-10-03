@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface Conversation {
-  id: number;
+  id: string;
   name: string;
   lastMessage: string;
   avatarUrl: string;
@@ -30,6 +29,11 @@ export default function ConversationList({
     <Card className="w-80 border-r">
       <ScrollArea className="h-full">
         <CardContent className="p-2">
+          {conversations.length === 0 && (
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              No conversations yet. Go find a match!
+            </div>
+          )}
           {conversations.map((convo) => (
             <div
               key={convo.id}

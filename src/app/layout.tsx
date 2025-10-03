@@ -9,8 +9,8 @@ import {
 } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/app-sidebar';
 import AppHeader from '@/components/app-header';
-import { AuthProvider, AuthLayout } from '@/hooks/use-auth';
-import { Loader2 } from 'lucide-react';
+import { FirebaseClientProvider } from '@/firebase';
+import { AuthLayout } from '@/hooks/use-auth';
 
 export const metadata: Metadata = {
   title: 'GymFlow',
@@ -33,7 +33,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <AuthProvider>
+        <FirebaseClientProvider>
             <AuthLayout>
               <SidebarProvider defaultOpen>
                 <Sidebar collapsible="icon" variant="sidebar" side="left">
@@ -46,7 +46,7 @@ export default function RootLayout({
                 </SidebarInset>
               </SidebarProvider>
             </AuthLayout>
-        </AuthProvider>
+        </FirebaseClientProvider>
         <Toaster />
       </body>
     </html>

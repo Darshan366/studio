@@ -1,4 +1,5 @@
-// src/lib/firebase.ts
+// This file is deprecated and will be removed in a future update.
+// Please use the exports from '@/firebase' instead.
 import { initializeApp, getApps, getApp, FirebaseError } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';

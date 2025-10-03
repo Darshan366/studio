@@ -25,9 +25,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { useAuth } from '@/hooks/use-auth';
-import { auth } from '@/lib/firebase';
+import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 
 const navItems = [
@@ -42,9 +40,9 @@ const navItems = [
 ];
 
 export function UserMenu() {
-  const { user } = useAuth();
+  const { user } = useUser();
+  const auth = useAuth();
   const router = useRouter();
-  const userAvatar = PlaceHolderImages.find((img) => img.id === 'user-avatar');
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -62,10 +60,10 @@ export function UserMenu() {
                 alt={user.displayName || 'User avatar'}
               />
             ) : (
-               userAvatar && <AvatarImage
-                src={userAvatar.imageUrl}
+               <AvatarImage
+                src="https://picsum.photos/seed/user-avatar/200/200"
                 alt="User avatar"
-                data-ai-hint={userAvatar.imageHint}
+                data-ai-hint="person portrait"
               />
             )}
             <AvatarFallback>{user?.displayName?.charAt(0) || 'A'}</AvatarFallback>
@@ -108,7 +106,7 @@ export default function AppHeader() {
   const pathname = usePathname();
   const title =
     navItems.find((item) => item.href === pathname)?.label || 'Dashboard';
-    const { user } = useAuth();
+    const { user } = useUser();
 
 
   if (!user) return null;
