@@ -77,7 +77,7 @@ export default function MessagesPage() {
     };
 
     fetchConversations();
-  }, [matches, firestore, user?.uid, selectedConversation]);
+  }, [matches, firestore, user?.uid]);
 
   if (loading) {
     return (
