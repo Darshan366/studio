@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -17,37 +17,41 @@ import {
 } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Wand2, Dumbbell, Zap, Sparkles } from 'lucide-react';
+import { Loader2, Wand2, ThumbsUp, ThumbsDown, ArrowUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useUser } from '@/firebase';
 import { cn } from '@/lib/utils';
 
-// We now have a single prompt field. The AI will parse the details.
 const formSchema = z.object({
-  prompt: z.string().min(10, 'Please enter a more detailed request.'),
+  prompt: z.string().min(1, 'Please enter a prompt.'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-const suggestionPrompts = [
-    {
-        icon: Dumbbell,
-        text: "Alternatives for Squats with only resistance bands",
-    },
-    {
-        icon: Zap,
-        text: "Create a chest workout using just dumbbells",
-    },
-    {
-        icon: Sparkles,
-        text: "Suggest a 15-minute core routine for a beginner",
-    },
-]
+interface Message {
+    type: 'user' | 'ai';
+    text: string;
+    reasoning?: string;
+}
 
 export default function AiSuggestionForm() {
+  const { user } = useUser();
   const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<SuggestExerciseAlternativesOutput | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const { toast } = useToast();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+
+  useEffect(() => {
+    if (user && messages.length === 0) {
+        setMessages([
+            {
+                type: 'ai',
+                text: `Hi ${user.displayName}! How can I help today?`,
+            }
+        ]);
+    }
+  }, [user, messages.length])
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -56,15 +60,26 @@ export default function AiSuggestionForm() {
     },
   });
 
+  useEffect(() => {
+    if (containerRef.current) {
+        containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
+  }, [messages])
+
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
-    setResult(null);
+    
+    const userMessage: Message = { type: 'user', text: values.prompt };
+    setMessages(prev => [...prev, userMessage]);
+    form.reset();
 
     try {
       const output = await suggestExerciseAlternatives({
         prompt: values.prompt,
+        userName: user?.displayName || 'user'
       });
-      setResult(output);
+      const aiMessage: Message = { type: 'ai', text: output.alternativeExercises, reasoning: output.reasoning };
+      setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
       console.error(error);
       toast({
@@ -72,115 +87,89 @@ export default function AiSuggestionForm() {
         title: 'An error occurred',
         description: 'Failed to get suggestions. Please try again.',
       });
+       const aiErrorMessage: Message = { type: 'ai', text: 'Sorry, I had trouble with that request. Please try again.' };
+       setMessages(prev => [...prev, aiErrorMessage]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSuggestionClick = (prompt: string) => {
-    form.setValue('prompt', prompt);
-    // Optionally, you could also submit the form directly
-    // onSubmit({ prompt });
-  }
-
   return (
-    <div className="animate-fade-in-up space-y-8">
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <FormField
-            control={form.control}
-            name="prompt"
-            render={({ field }) => (
-              <FormItem>
-                <FormControl>
-                  <Textarea
-                    placeholder="Enter the exercise to replace (e.g., Bench Press), the equipment you have (e.g., Dumbbells), and your recent workout focus..."
-                    className="min-h-[150px] rounded-xl border-border/80 bg-background/80 p-4 text-base transition-all duration-300 ease-in-out focus:border-blue-500 focus:bg-background focus:ring-2 focus:ring-blue-500/20"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        
-            <div className="space-y-4 text-center">
-                <h3 className="text-sm font-medium text-muted-foreground">Or, try one of these...</h3>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    {suggestionPrompts.map((prompt, index) => (
-                        <button
-                            key={index}
-                            type="button"
-                            onClick={() => handleSuggestionClick(prompt.text)}
-                            className="group flex flex-col items-center justify-center gap-2 rounded-xl border border-border/50 bg-muted/30 p-4 text-center transition-colors hover:bg-muted/80"
-                        >
-                            <prompt.icon className="h-6 w-6 text-muted-foreground transition-colors group-hover:text-foreground" />
-                            <p className="text-sm text-muted-foreground transition-colors group-hover:text-foreground">{prompt.text}</p>
-                        </button>
-                    ))}
+    <div className="flex h-full flex-col justify-between" ref={containerRef}>
+        <div className="flex-1 space-y-6 overflow-y-auto p-4">
+            {messages.map((message, index) => (
+                <div key={index} className={cn("flex", message.type === 'user' ? 'justify-end' : 'justify-start')}>
+                    {message.type === 'user' ? (
+                        <div className="max-w-md rounded-lg bg-muted px-4 py-2 text-muted-foreground">
+                            {message.text}
+                        </div>
+                    ) : (
+                       <div className="max-w-md space-y-4">
+                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Wand2 className="h-4 w-4" />
+                                <span>Thought</span>
+                           </div>
+                           <p className="text-foreground">{message.text}</p>
+                           {message.reasoning && (
+                                <p className="text-muted-foreground">{message.reasoning}</p>
+                           )}
+                           <div className="flex items-center gap-2">
+                                <button className="text-muted-foreground hover:text-foreground"><ThumbsUp className="h-4 w-4"/></button>
+                                <button className="text-muted-foreground hover:text-foreground"><ThumbsDown className="h-4 w-4"/></button>
+                           </div>
+                       </div>
+                    )}
                 </div>
-            </div>
+            ))}
+             {isLoading && (
+                <div className="flex justify-start">
+                    <div className="max-w-md space-y-4">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Wand2 className="h-4 w-4" />
+                            <span>Thinking...</span>
+                        </div>
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                </div>
+            )}
+        </div>
 
-          <div className="flex justify-center pt-4">
-             <Button 
-                type="submit" 
-                disabled={isLoading} 
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
-                size="lg"
-            >
-              {isLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Wand2 className="mr-2 h-4 w-4" />
-              )}
-              Get Suggestions
-            </Button>
-          </div>
-        </form>
-      </Form>
-
-      {isLoading && (
-         <Card className="animate-pulse">
-            <CardHeader>
-                <CardTitle className="h-6 w-3/4 rounded bg-muted"></CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="h-4 bg-muted rounded w-1/4"></div>
-                <div className="h-4 bg-muted rounded w-full"></div>
-                <div className="h-4 bg-muted rounded w-3/4"></div>
-                 <div className="h-4 bg-muted rounded w-1/4 pt-4"></div>
-                <div className="h-4 bg-muted rounded w-full"></div>
-                <div className="h-4 bg-muted rounded w-2/3"></div>
-            </CardContent>
-        </Card>
-      )}
-
-      {result && (
-        <Card className="animate-fade-in-up">
-          <CardHeader>
-            <CardTitle className="text-xl">Suggested Alternatives</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6 text-base">
-            <div>
-              <h3 className="font-semibold text-muted-foreground">Exercises</h3>
-              <p className="text-foreground">{result.alternativeExercises}</p>
-            </div>
-            <div className="border-t border-border pt-6">
-              <h3 className="font-semibold text-muted-foreground">Reasoning</h3>
-              <p className="text-foreground">{result.reasoning}</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+        <div className="sticky bottom-0 bg-background/80 p-4 backdrop-blur-sm">
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="relative">
+                <FormField
+                    control={form.control}
+                    name="prompt"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormControl>
+                        <Textarea
+                            placeholder="Ask, search, or make anything..."
+                            className="min-h-12 resize-none rounded-xl border-border/80 bg-muted/50 p-3 pr-12 text-base transition-all duration-300 ease-in-out focus:border-blue-500 focus:bg-background focus:ring-2 focus:ring-blue-500/20"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    form.handleSubmit(onSubmit)();
+                                }
+                            }}
+                            {...field}
+                        />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <Button 
+                    type="submit" 
+                    disabled={isLoading} 
+                    size="icon" 
+                    className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-primary/80 text-primary-foreground hover:bg-primary"
+                >
+                    <ArrowUp className="h-4 w-4" />
+                </Button>
+                </form>
+            </Form>
+        </div>
     </div>
   );
 }
-
-// Add this to your globals.css or a relevant stylesheet if it doesn't exist
-// @keyframes fade-in-up {
-//   from { opacity: 0; transform: translateY(10px); }
-//   to { opacity: 1; transform: translateY(0); }
-// }
-// .animate-fade-in-up {
-//   animation: fade-in-up 0.5s ease-out forwards;
-// }
