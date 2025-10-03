@@ -1,4 +1,3 @@
-// src/ai/flows/suggest-exercise-alternatives.ts
 'use server';
 
 /**
@@ -15,6 +14,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { geminiPro } from '@genkit-ai/google-genai';
 
 // Define the input schema
 const SuggestExerciseAlternativesInputSchema = z.object({
@@ -42,6 +42,7 @@ const suggestExerciseAlternativesPrompt = ai.definePrompt({
   name: 'suggestExerciseAlternativesPrompt',
   input: {schema: SuggestExerciseAlternativesInputSchema},
   output: {schema: SuggestExerciseAlternativesOutputSchema},
+  model: geminiPro,
   prompt: `You are a friendly and expert personal trainer. A user named {{{userName}}} is asking for fitness advice.
 
   Their request is: "{{{prompt}}}"
