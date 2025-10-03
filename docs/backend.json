@@ -1,0 +1,222 @@
+{
+  "entities": {
+    "Swipe": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Swipe",
+      "type": "object",
+      "description": "Represents a user's swipe action on another user's profile.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the swipe event."
+        },
+        "swiperId": {
+          "type": "string",
+          "description": "Reference to User who initiated the swipe. (Relationship: User 1:N Swipe (as swiper))"
+        },
+        "targetId": {
+          "type": "string",
+          "description": "Reference to User who was swiped on. (Relationship: User 1:N Swipe (as target))"
+        },
+        "direction": {
+          "type": "string",
+          "description": "Indicates the direction of the swipe (e.g., 'right', 'left')."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the swipe occurred.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "swiperId",
+        "targetId",
+        "direction",
+        "timestamp"
+      ]
+    },
+    "Match": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Match",
+      "type": "object",
+      "description": "Represents a mutual match between two users.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the match."
+        },
+        "userAId": {
+          "type": "string",
+          "description": "Reference to User A in the match. (Relationship: User 1:N Match (as User A))"
+        },
+        "userBId": {
+          "type": "string",
+          "description": "Reference to User B in the match. (Relationship: User 1:N Match (as User B))"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of when the match was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userAId",
+        "userBId",
+        "createdAt"
+      ]
+    },
+    "Conversation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Conversation",
+      "type": "object",
+      "description": "Represents a conversation between two matched users.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the conversation. This is the same as the Match ID."
+        },
+        "userAId": {
+          "type": "string",
+          "description": "Reference to User A in the conversation. (Relationship: User 1:N Conversation (as User A))"
+        },
+        "userBId": {
+          "type": "string",
+          "description": "Reference to User B in the conversation. (Relationship: User 1:N Conversation (as User B))"
+        },
+        "lastMessage": {
+          "type": "string",
+          "description": "The content of the most recent message in the conversation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of the last activity (new message) in the conversation.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userAId",
+        "userBId",
+        "lastMessage",
+        "updatedAt"
+      ]
+    },
+    "Message": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Message",
+      "type": "object",
+      "description": "Represents a single message within a conversation.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the message."
+        },
+        "conversationId": {
+          "type": "string",
+          "description": "Reference to Conversation to which this message belongs. (Relationship: Conversation 1:N Message)"
+        },
+        "senderId": {
+          "type": "string",
+          "description": "Reference to User who sent the message. (Relationship: User 1:N Message (as sender))"
+        },
+        "text": {
+          "type": "string",
+          "description": "The content of the message."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the message was sent.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "conversationId",
+        "senderId",
+        "text",
+        "timestamp"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/swipes/{swipeId}",
+        "definition": {
+          "entityName": "Swipe",
+          "schema": {
+            "$ref": "#/backend/entities/Swipe"
+          },
+          "description": "Stores swipe data for each user. Used to determine matches. Includes swiperId and targetId for identifying the users involved in the swipe.",
+          "params": [
+            {
+              "name": "swipeId",
+              "description": "Unique identifier for the swipe event."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/matches/{matchId}",
+        "definition": {
+          "entityName": "Match",
+          "schema": {
+            "$ref": "#/backend/entities/Match"
+          },
+          "description": "Stores confirmed matches between users. Includes userAId and userBId for authorization independence in conversations.",
+          "params": [
+            {
+              "name": "matchId",
+              "description": "Unique identifier for the match."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/conversations/{conversationId}",
+        "definition": {
+          "entityName": "Conversation",
+          "schema": {
+            "$ref": "#/backend/entities/Conversation"
+          },
+          "description": "Stores conversation metadata. conversationId is the same as matchId. Includes userAId and userBId, denormalized from the Match document, to enforce authorization independence.",
+          "params": [
+            {
+              "name": "conversationId",
+              "description": "Unique identifier for the conversation, which is the same as the matchId."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/conversations/{conversationId}/messages/{messageId}",
+        "definition": {
+          "entityName": "Message",
+          "schema": {
+            "$ref": "#/backend/entities/Message"
+          },
+          "description": "Stores individual messages within a conversation. The conversationId ensures messages are scoped to the correct conversation, enforcing access control.",
+          "params": [
+            {
+              "name": "conversationId",
+              "description": "Unique identifier for the conversation to which the message belongs."
+            },
+            {
+              "name": "messageId",
+              "description": "Unique identifier for the message."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to support a mutual matching system for the GymFlow app, ensuring secure and scalable data management while adhering to the core design principles. Authorization Independence is achieved through denormalization. Specifically, the `Match` document stores `userAId` and `userBId`. This allows security rules in the `conversations` collection and `messages` subcollection to validate user access based on the match data, without needing to perform `get()` operations on the `users` collection. The structure supports QAPs through structural segregation and the use of path-based ownership. The `swipes` collection stores swipe data, which is used to determine matches. The `matches` collection stores confirmed matches. Conversations are stored in the `conversations` collection, with messages stored in a subcollection, ensuring only matched users can access conversation data. This segregation simplifies security rules and prevents unauthorized access. Path-based ownership is used for conversations and messages, where the conversation ID acts as the match ID, further simplifying security rules."
+  }
+}
