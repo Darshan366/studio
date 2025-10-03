@@ -41,7 +41,9 @@ const suggestExerciseAlternativesPrompt = ai.definePrompt({
   name: 'suggestExerciseAlternativesPrompt',
   input: {schema: SuggestExerciseAlternativesInputSchema},
   output: {schema: SuggestExerciseAlternativesOutputSchema},
-  model: 'gemini-pro',
+  config: {
+    model: 'gemini-pro'
+  },
   prompt: `You are a friendly and expert personal trainer. A user named {{{userName}}} is asking for fitness advice.
 
   Their request is: "{{{prompt}}}"
