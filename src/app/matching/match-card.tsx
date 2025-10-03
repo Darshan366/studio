@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { Heart, X, Loader2 } from 'lucide-react';
-import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import {
   collection,
   addDoc,
@@ -16,8 +16,6 @@ import {
   where,
   getDocs,
   limit,
-  DocumentData,
-  getDocsFromCache,
 } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/types/user';
@@ -54,10 +52,6 @@ export default function MatchCard() {
         // 2. Query for users, excluding self and already swiped users
         const usersToExclude = [user.uid, ...swipedIds];
 
-        // Firestore's `not-in` query is limited to 10 items.
-        // A more scalable approach for a production app would be to filter client-side
-        // after a broader fetch, or restructure the data. For this app's scale,
-        // we will fetch a batch and filter.
         const usersQuery = query(
             collection(firestore, 'users'),
             limit(20)
@@ -92,37 +86,32 @@ export default function MatchCard() {
     const targetUser = profiles[currentIndex];
     setIsSwiping(true);
 
-    try {
-      // For both left and right swipes, we record the action to prevent showing the same user again.
-      await addDoc(swipesCollection, {
+    const swipeData = {
         swiperId: user.uid,
         targetId: targetUser.uid,
         direction: direction,
         timestamp: serverTimestamp(),
-      });
+      };
 
-       // A Cloud Function would then listen to right swipes and check for a match.
-       if (direction === 'right') {
-         // This toast is a placeholder for the match notification from the backend
-         toast({
-            title: "Swipe recorded!",
-            description: "We'll let you know if it's a match.",
-        });
-       }
-
-      // Move to the next profile
-      setCurrentIndex((prevIndex) => prevIndex + 1);
-
-    } catch (error) {
-      console.error('Error swiping:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Swipe Failed',
-        description: 'Could not record your swipe. Please try again.',
-      });
-    } finally {
-      setIsSwiping(false);
-    }
+    addDoc(swipesCollection, swipeData).catch(error => {
+        errorEmitter.emit(
+            'permission-error',
+            new FirestorePermissionError({
+                path: swipesCollection.path,
+                operation: 'create',
+                requestResourceData: swipeData,
+            })
+        )
+    }).finally(() => {
+        if (direction === 'right') {
+            toast({
+                title: "Swipe recorded!",
+                description: "We'll let you know if it's a match.",
+            });
+        }
+        setCurrentIndex((prevIndex) => prevIndex + 1);
+        setIsSwiping(false);
+    });
   };
 
   if (isLoading) {
