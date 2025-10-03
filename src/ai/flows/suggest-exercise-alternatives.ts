@@ -13,6 +13,7 @@
  */
 
 import {ai} from '@/ai/genkit';
+import {googleAI} from '@genkit-ai/google-genai';
 import {z} from 'genkit';
 
 // Define the input schema
@@ -42,7 +43,7 @@ const suggestExerciseAlternativesPrompt = ai.definePrompt({
   input: {schema: SuggestExerciseAlternativesInputSchema},
   output: {schema: SuggestExerciseAlternativesOutputSchema},
   config: {
-    model: 'gemini-pro',
+    model: googleAI.model('gemini-pro'),
   },
   prompt: `You are a friendly and expert personal trainer. A user named {{{userName}}} is asking for fitness advice.
 
