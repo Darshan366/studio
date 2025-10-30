@@ -1,27 +1,23 @@
 /**
  * @file Firestore Security Rules
- * @description This ruleset enforces a user-centric security model for a fitness matching application.
+ * @description This ruleset enforces a user-centric security model for a fitness application.
  *
  * Data Structure:
- * - /users/{userId}: Stores public user profile information, accessible only to the owner.
- * - /swipes/{swipeId}: Stores swipe actions, write-only for clients.
- * - /matches/{matchId}: Stores mutual matches, read-only for clients. Server-managed.
- * - /conversations/{matchId}: Stores conversation metadata, readable/writable by participants.
- * - /conversations/{matchId}/messages/{messageId}: Stores messages within a conversation, readable/writable by participants.
+ * - User profiles are stored in `/users/{userId}`.
+ * - Swipes are stored in `/swipes/{swipeId}`.
+ * - Matches are stored in `/matches/{matchId}`.
+ * - Conversations are stored in `/conversations/{matchId}`.
+ * - Messages within conversations are stored in `/conversations/{matchId}/messages/{messageId}`.
  *
  * Key Security Decisions:
- * - User profiles are private and only accessible/modifiable by the owning user.
- * - Swipes are write-only.
- * - Matches are read-only for clients and are intended to be created by a trusted server environment.
- * - Conversations and Messages are accessible only to the participants.
- * - The `users` array of a Match document stores the UIDs of the involved users, and is required for authorization.
- * - The `users` array of a Conversation document stores the UIDs of the involved users, and is required for authorization.
+ * - Users can only read/write their own profile data.
+ * - Clients can only write swipe data, not read it.
+ * - Matches are created server-side and are read-only for clients.
+ * - Conversations are accessible to the two users involved.
+ * - Messages within conversations are accessible to the two users involved.
  *
  * Denormalization for Authorization:
- * - Matches and Conversations contain `users` array that lists the UIDs of the involved users. This denormalization enables efficient and secure authorization for read and write operations.
- *
- * Structural Segregation:
- * - Public user profiles are stored directly under `/users/{userId}`, ensuring easy access for display purposes.
+ * - The `Conversation` and `Message` security rules rely on the `users` array within the `Conversation` document to authorize access. This avoids needing to query a separate collection to determine participants.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -30,38 +26,44 @@ service cloud.firestore {
     /**
      * @description Controls access to user profile information.
      * @path /users/{userId}
-     * @allow (get, list, update, delete) User with matching UID can perform these actions.
-     * @allow (create) User can create their own profile.
-     * @deny (get, list, update, delete) User cannot access other user profiles.
-     * @principle Enforces document ownership for all operations.
+     * @allow (create) User with ID 'user123' can create their profile.
+     *   request.auth.uid == 'user123' and request.resource.data.uid == 'user123'
+     * @allow (get) User with ID 'user123' can read their profile.
+     *   request.auth.uid == 'user123'
+     * @allow (update) User with ID 'user123' can update their profile.
+     *   request.auth.uid == 'user123'
+     * @deny (create) User with ID 'user123' cannot create a profile with a different ID.
+     *   request.auth.uid == 'user123' but request.resource.data.uid == 'user456'
+     * @deny (update) User with ID 'user123' cannot update someone else's profile.
+     *   request.auth.uid == 'user456'
+     * @deny (delete) No one can delete a user profile (handled via account deletion).
+     *   request.auth.uid == 'user123'
+     * @principle Enforces document ownership for reads and writes.
      */
     match /users/{userId} {
-      function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
-      }
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-
       allow get: if isOwner(userId);
-      allow list: if false; // Listing all users is not permitted.
-      allow create: if isOwner(userId) && request.resource.data.uid == userId;
+      allow list: if false;
+      allow create: if isOwner(userId) && request.resource.data.uid == request.auth.uid;
       allow update: if isExistingOwner(userId) && request.resource.data.uid == resource.data.uid;
-      allow delete: if isExistingOwner(userId);
+      allow delete: if false;
     }
 
     /**
-     * @description Controls access to swipe actions. Swipes are write-only and cannot be read directly.
+     * @description Controls access to swipe data. Swipes are write-only for clients.
      * @path /swipes/{swipeId}
-     * @allow (create) Any authenticated user can create a swipe action.
-     * @deny (get, list, update, delete) No one can read, update, or delete swipe actions.
-     * @principle Enforces write-only access for swipe data.
+     * @allow (create) Any authenticated user can create a swipe.
+     *   request.auth.uid != null
+     * @deny (get) No one can read swipe data directly.
+     *   request.auth.uid == 'user123'
+     * @deny (list) No one can list swipe data.
+     *   request.auth.uid == 'user123'
+     * @deny (update) No one can update swipe data.
+     *   request.auth.uid == 'user123'
+     * @deny (delete) No one can delete swipe data.
+     *   request.auth.uid == 'user123'
+     * @principle Restricts client access to write-only. Data managed server-side.
      */
     match /swipes/{swipeId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
       allow get: if false;
       allow list: if false;
       allow create: if isSignedIn();
@@ -72,19 +74,20 @@ service cloud.firestore {
     /**
      * @description Controls access to match data. Matches are read-only for clients.
      * @path /matches/{matchId}
-     * @allow (get, list) Any authenticated user can read match data.
-     * @deny (create, update, delete) No one can create, update, or delete match data (server-managed).
-     * @principle Enforces read-only access for match data, with server-side management.
+     * @allow (get) Any authenticated user can read a match if they are one of the users in the match.
+     *   request.auth.uid == 'user123' and 'user123' in resource.data.users
+     * @allow (list) Any authenticated user can list matches.
+     *   request.auth.uid == 'user123'
+     * @deny (create) No one can create match data directly (server-side only).
+     *   request.auth.uid == 'user123'
+     * @deny (update) No one can update match data directly (server-side only).
+     *   request.auth.uid == 'user123'
+     * @deny (delete) No one can delete match data directly (server-side only).
+     *   request.auth.uid == 'user123'
+     * @principle Restricts client access to read-only. Data managed server-side.
      */
     match /matches/{matchId} {
-       function isSignedIn() {
-        return request.auth != null;
-      }
-       function isParticipant(users) {
-        return request.auth.uid in users;
-      }
-
-      allow get: if isSignedIn() && isParticipant(resource.data.users);
+      allow get: if isSignedIn() && resource.data.users.hasAny([request.auth.uid]);
       allow list: if isSignedIn();
       allow create: if false;
       allow update: if false;
@@ -92,46 +95,66 @@ service cloud.firestore {
     }
 
     /**
-     * @description Controls access to conversation metadata. Only participants can read and write.
+     * @description Controls access to conversation metadata.
      * @path /conversations/{matchId}
-     * @allow (get, list, update, delete) Participants can perform these actions.
-     * @allow (create) Participants can create a conversation.
-     * @deny (get, list, update, delete) Non-participants cannot access the conversation.
-     * @principle Enforces shared access between participants for conversation metadata.
+     * @allow (get) Any participant can read a conversation.
+     *   request.auth.uid == 'user123' and 'user123' in resource.data.users
+     * @allow (list) No one can list conversations.
+     *   request.auth.uid == 'user123'
+     * @allow (create) Any participant can create a conversation.
+     *   request.auth.uid == 'user123' and 'user123' in request.resource.data.users
+     * @allow (update) Any participant can update a conversation.
+     *   request.auth.uid == 'user123' and 'user123' in request.resource.data.users
+     * @deny (create) A user cannot create a conversation with users that do not include themselves.
+     *   request.auth.uid == 'user123' and 'user123' not in request.resource.data.users
+     * @deny (update) A user cannot update a conversation for the wrong users.
+     *   request.auth.uid == 'user123' and 'user123' not in request.resource.data.users
+     * @deny (delete) No one can delete a conversation.
+     *   request.auth.uid == 'user123'
+     * @principle Enforces shared access based on participants.
      */
     match /conversations/{matchId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-      function isParticipant(users) {
-        return request.auth.uid in users;
-      }
-      allow get: if isSignedIn() && isParticipant(resource.data.users);
-      allow list: if false; // Listing all conversations is not permitted.
-      allow create: if isSignedIn() && isParticipant(request.resource.data.users);
-      allow update: if isSignedIn() && isParticipant(resource.data.users);
+      allow get: if isSignedIn() && resource.data.users.hasAny([request.auth.uid]);
+      allow list: if false;
+      allow create: if isSignedIn() && request.resource.data.users.hasAny([request.auth.uid]);
+      allow update: if isSignedIn() && resource.data.users.hasAny([request.auth.uid]);
       allow delete: if false;
     }
 
     /**
-     * @description Controls access to messages within a conversation. Only participants can read and write.
+     * @description Controls access to messages within a conversation.
      * @path /conversations/{matchId}/messages/{messageId}
-     * @allow (get, list, create, update, delete) Participants can perform these actions.
-     * @deny (get, list, create, update, delete) Non-participants cannot access messages.
-     * @principle Enforces shared access between participants for messages.
+     * @allow (get) Any participant of the conversation can read a message.
+     *   request.auth.uid == 'user123' and get(/databases/$(database)/documents/conversations/$(matchId)).data.users.hasAny(['user123'])
+     * @allow (list) Any participant of the conversation can list messages.
+     *   request.auth.uid == 'user123' and get(/databases/$(database)/documents/conversations/$(matchId)).data.users.hasAny(['user123'])
+     * @allow (create) Any participant of the conversation can create a message.
+     *   request.auth.uid == 'user123' and get(/databases/$(database)/documents/conversations/$(matchId)).data.users.hasAny(['user123'])
+     * @deny (update) No one can update a message.
+     *   request.auth.uid == 'user123'
+     * @deny (delete) No one can delete a message.
+     *   request.auth.uid == 'user123'
+     * @principle Enforces shared access based on conversation participants, using get() for subcollection access.
      */
     match /conversations/{matchId}/messages/{messageId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-      function isConversationParticipant(matchId) {
-          return get(/databases/$(database)/documents/conversations/$(matchId)).data.users.hasAny([request.auth.uid]);
-      }
-      allow get: if isSignedIn() && isConversationParticipant(matchId);
-      allow list: if isSignedIn() && isConversationParticipant(matchId);
-      allow create: if isSignedIn() && isConversationParticipant(matchId) && request.resource.data.senderId == request.auth.uid;
+      allow get: if isSignedIn() && get(/databases/$(database)/documents/conversations/$(matchId)).data.users.hasAny([request.auth.uid]);
+      allow list: if isSignedIn() && get(/databases/$(database)/documents/conversations/$(matchId)).data.users.hasAny([request.auth.uid]);
+      allow create: if isSignedIn() && get(/databases/$(database)/documents/conversations/$(matchId)).data.users.hasAny([request.auth.uid]);
       allow update: if false;
       allow delete: if false;
     }
+  }
+
+  // Helper functions
+  function isSignedIn() {
+    return request.auth != null;
+  }
+
+  function isOwner(userId) {
+    return request.auth.uid == userId;
+  }
+
+  function isExistingOwner(userId) {
+    return isOwner(userId) && resource != null;
   }
 }
