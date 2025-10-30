@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { Heart, X, Loader2 } from 'lucide-react';
-import { useUser, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useUser, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError, useCollection } from '@/firebase';
 import {
   collection,
   addDoc,
@@ -25,70 +25,64 @@ export default function MatchCard() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const [profiles, setProfiles] = useState<UserProfile[]>([]);
+  const [swipedIds, setSwipedIds] = useState<string[]>([]);
+  const [hasFetchedSwipes, setHasFetchedSwipes] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSwiping, setIsSwiping] = useState(false);
 
   const swipesCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'swipes');
   }, [firestore]);
-
+  
+  // 1. Get IDs of users the current user has already swiped on
   useEffect(() => {
-    const fetchPotentialMatches = async () => {
-      if (!user || !firestore) return;
-
-      setIsLoading(true);
-      try {
-        // 1. Get IDs of users the current user has already swiped on
+    if (!user || !firestore || hasFetchedSwipes) return;
+    
+    const fetchSwipedUsers = async () => {
         const swipesQuery = query(
           collection(firestore, 'swipes'),
           where('swiperId', '==', user.uid)
         );
         const swipesSnapshot = await getDocs(swipesQuery);
-        const swipedIds = swipesSnapshot.docs.map((doc) => doc.data().targetId);
-
-        // 2. Query for users, excluding self and already swiped users.
-        // We need at least one user to exclude, so we always add the current user.
-        const usersToExclude = [user.uid, ...swipedIds];
-        
-        // Firestore's 'not-in' query requires a non-empty array.
-        const usersQuery = query(
-            collection(firestore, 'users'),
-            where('uid', 'not-in', usersToExclude),
-            limit(10)
-        );
-
-        const usersSnapshot = await getDocs(usersQuery);
-        const potentialMatches = usersSnapshot.docs
-            .map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
-
-
-        setProfiles(potentialMatches);
-        setCurrentIndex(0);
-      } catch (error) {
-        // This is a generic error catch. If it's a Firestore error,
-        // it will likely be caught by the more specific logic in useCollection/useDoc,
-        // but this is a fallback.
-        console.error('Error fetching potential matches:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Could not load potential matches.',
-        });
-      } finally {
-        setIsLoading(false);
-      }
+        const seenIds = swipesSnapshot.docs.map((doc) => doc.data().targetId);
+        setSwipedIds(seenIds);
+        setHasFetchedSwipes(true);
     };
 
-    if(user && firestore) {
-      fetchPotentialMatches();
-    }
-  }, [user, firestore, toast]);
+    fetchSwipedUsers();
+  }, [user, firestore, hasFetchedSwipes]);
+
+  // 2. Query for users, excluding self and already swiped users.
+  const usersToExclude = useMemo(() => {
+      if(!user) return ['']; // Return a non-empty array for 'not-in' query
+      return [user.uid, ...swipedIds];
+  }, [user, swipedIds]);
+
+  const potentialMatchesQuery = useMemoFirebase(() => {
+    if (!user || !firestore || !hasFetchedSwipes || usersToExclude.length === 0) return null;
+    return query(
+        collection(firestore, 'users'),
+        where('uid', 'not-in', usersToExclude),
+        limit(10)
+    );
+  }, [user, firestore, hasFetchedSwipes, usersToExclude]);
+
+  const { data: profiles, isLoading: isLoadingProfiles, error: profilesError } = useCollection<UserProfile>(potentialMatchesQuery);
+
+  useEffect(() => {
+      if(profilesError) {
+          toast({
+              variant: 'destructive',
+              title: 'Error Loading Matches',
+              description: 'There was a problem loading potential matches. You might not have permission to view other users.',
+          });
+      }
+  }, [profilesError, toast]);
+
 
   const handleSwipe = (direction: 'left' | 'right') => {
-    if (!user || !swipesCollection || profiles.length === 0) return;
+    if (!user || !swipesCollection || !profiles || profiles.length === 0) return;
 
     const targetUser = profiles[currentIndex];
     if (!targetUser) return;
@@ -123,6 +117,9 @@ export default function MatchCard() {
     });
   };
 
+  const isLoading = isLoadingProfiles || !hasFetchedSwipes;
+  const currentProfiles = profiles || [];
+  
   if (isLoading) {
     return (
         <Card className="flex h-[500px] items-center justify-center">
@@ -134,7 +131,7 @@ export default function MatchCard() {
     )
   }
 
-  if (profiles.length === 0 || currentIndex >= profiles.length) {
+  if (currentProfiles.length === 0 || currentIndex >= currentProfiles.length) {
     return (
       <Card className="flex h-[500px] items-center justify-center">
         <CardContent className="text-center">
@@ -145,7 +142,7 @@ export default function MatchCard() {
     );
   }
 
-  const currentProfile = profiles[currentIndex];
+  const currentProfile = currentProfiles[currentIndex];
 
   return (
     <div className="relative">
