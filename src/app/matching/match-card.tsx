@@ -7,17 +7,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { Heart, X, Loader2 } from 'lucide-react';
-import { useUser, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError, useCollection } from '@/firebase';
+import { useUser, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import {
   collection,
-  addDoc,
-  serverTimestamp,
+  writeBatch,
+  doc,
   query,
   where,
   getDocs,
   limit,
-  writeBatch,
-  doc,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/types/user';
@@ -65,13 +64,21 @@ export default function MatchCard() {
       // Create a non-empty array for the 'not-in' query to work.
       // Firestore 'not-in' queries cannot be called with an empty array.
       if (!user) return ['placeholder']; 
-      return [user.uid, ...swipedIds];
+      // Start with the current user's ID.
+      const excluded = [user.uid];
+      // Add IDs of users already swiped on.
+      if (swipedIds.length > 0) {
+          excluded.push(...swipedIds);
+      }
+      return excluded;
   }, [user, swipedIds]);
 
   const potentialMatchesQuery = useMemoFirebase(() => {
     // Wait until we have the list of users to exclude.
-    if (!user || !firestore || !hasFetchedSwipes || usersToExclude.length === 0) return null;
+    if (!user || !firestore || !hasFetchedSwipes) return null;
     
+    // The usersToExclude array will always have at least the current user's UID,
+    // so it's safe to use in a 'not-in' query.
     return query(
         collection(firestore, 'users'),
         where('uid', 'not-in', usersToExclude),
@@ -148,27 +155,29 @@ export default function MatchCard() {
                     title: "It's a Match!",
                     description: `You and ${targetUser.name} have liked each other.`,
                 });
-            } else {
-                 toast({
-                    title: "Swipe recorded!",
-                    description: "We'll let you know if it's a match.",
-                });
             }
         }
-
+        
+        // This commit was missing a success toast for non-match swipes
         await batch.commit();
+
+        if (direction === 'left' || (direction === 'right' && !(await checkForMatch(targetUser.uid)))) {
+             toast({
+                title: "Swipe recorded!",
+                description: "Your choice has been saved.",
+            });
+        }
 
     } catch (error) {
         console.error("Error during swipe operation:", error);
-        errorEmitter.emit(
-            'permission-error',
-            new FirestorePermissionError({
-                path: 'swipes', // Path can be more generic for a batch write
-                operation: 'write',
-                requestResourceData: { action: 'swipe', target: targetUser.uid }
-            })
-        )
+         toast({
+            variant: "destructive",
+            title: "Swipe Error",
+            description: "Could not record your swipe. Please try again.",
+        });
     } finally {
+        // Add the swiped user to the local list to prevent re-seeing them before a refresh
+        setSwipedIds(prev => [...prev, targetUser.uid]);
         // Move to the next profile
         setCurrentIndex((prevIndex) => prevIndex + 1);
         setIsSwiping(false);
