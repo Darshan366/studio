@@ -26,65 +26,18 @@ export default function MatchCard() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const [swipedIds, setSwipedIds] = useState<string[]>([]);
-  const [hasFetchedSwipes, setHasFetchedSwipes] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
-
-  // 1. Get IDs of users the current user has already swiped on
-  useEffect(() => {
-    if (!user || !firestore) return;
-    
-    const fetchSwipedUsers = async () => {
-        // Reset state for user change
-        setHasFetchedSwipes(false);
-        setSwipedIds([]);
-        setCurrentIndex(0);
-
-        const swipesQuery = query(
-          collection(firestore, 'swipes'),
-          where('swiperId', '==', user.uid)
-        );
-        try {
-            const swipesSnapshot = await getDocs(swipesQuery);
-            const seenIds = swipesSnapshot.docs.map((doc) => doc.data().targetId);
-            setSwipedIds(seenIds);
-        } catch (e) {
-            console.error("Failed to fetch swipes", e);
-        } finally {
-            setHasFetchedSwipes(true);
-        }
-    };
-
-    fetchSwipedUsers();
-  }, [user, firestore]);
-
-  // 2. Query for users, excluding self and already swiped users.
-  const usersToExclude = useMemo(() => {
-      // Create a non-empty array for the 'not-in' query to work.
-      // Firestore 'not-in' queries cannot be called with an empty array.
-      if (!user) return ['placeholder']; 
-      // Start with the current user's ID.
-      const excluded = [user.uid];
-      // Add IDs of users already swiped on.
-      if (swipedIds.length > 0) {
-          excluded.push(...swipedIds);
-      }
-      return excluded;
-  }, [user, swipedIds]);
-
+  
+  // Query for all users, excluding the current user.
   const potentialMatchesQuery = useMemoFirebase(() => {
-    // Wait until we have the list of users to exclude.
-    if (!user || !firestore || !hasFetchedSwipes) return null;
+    if (!user || !firestore) return null;
     
-    // The usersToExclude array will always have at least the current user's UID,
-    // so it's safe to use in a 'not-in' query.
     return query(
         collection(firestore, 'users'),
-        where('uid', 'not-in', usersToExclude),
-        limit(10)
+        where('uid', '!=', user.uid)
     );
-  }, [user, firestore, hasFetchedSwipes, usersToExclude]);
+  }, [user, firestore]);
 
   const { data: profiles, isLoading: isLoadingProfiles, error: profilesError } = useCollection<UserProfile>(potentialMatchesQuery);
 
@@ -93,7 +46,7 @@ export default function MatchCard() {
           toast({
               variant: 'destructive',
               title: 'Error Loading Matches',
-              description: 'There was a problem loading potential matches. You might not have permission to view other users.',
+              description: profilesError.message || 'There was a problem loading potential matches.',
           });
       }
   }, [profilesError, toast]);
@@ -160,13 +113,6 @@ export default function MatchCard() {
         
         await batch.commit();
 
-        if (direction === 'left') {
-             toast({
-                title: "Passed!",
-                description: "Your choice has been saved.",
-            });
-        }
-
     } catch (error) {
         console.error("Error during swipe operation:", error);
          toast({
@@ -175,18 +121,13 @@ export default function MatchCard() {
             description: "Could not record your swipe. Please try again.",
         });
     } finally {
-        // Add the swiped user to the local list to prevent re-seeing them before a refresh
-        setSwipedIds(prev => [...prev, targetUser.uid]);
         // Move to the next profile
         setCurrentIndex((prevIndex) => prevIndex + 1);
         setIsSwiping(false);
     }
   };
 
-  const isLoading = isLoadingProfiles || !hasFetchedSwipes;
-  const currentProfiles = profiles || [];
-  
-  if (isLoading) {
+  if (isLoadingProfiles) {
     return (
         <Card className="flex h-[500px] items-center justify-center">
             <CardContent className="text-center">
@@ -196,6 +137,8 @@ export default function MatchCard() {
         </Card>
     )
   }
+
+  const currentProfiles = profiles || [];
 
   if (currentProfiles.length === 0 || currentIndex >= currentProfiles.length) {
     return (
