@@ -16,6 +16,8 @@ import {
   where,
   getDocs,
   limit,
+  writeBatch,
+  doc,
 } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/types/user';
@@ -30,37 +32,46 @@ export default function MatchCard() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
 
-  const swipesCollection = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'swipes');
-  }, [firestore]);
-  
   // 1. Get IDs of users the current user has already swiped on
   useEffect(() => {
-    if (!user || !firestore || hasFetchedSwipes) return;
+    if (!user || !firestore) return;
     
     const fetchSwipedUsers = async () => {
+        // Reset state for user change
+        setHasFetchedSwipes(false);
+        setSwipedIds([]);
+        setCurrentIndex(0);
+
         const swipesQuery = query(
           collection(firestore, 'swipes'),
           where('swiperId', '==', user.uid)
         );
-        const swipesSnapshot = await getDocs(swipesQuery);
-        const seenIds = swipesSnapshot.docs.map((doc) => doc.data().targetId);
-        setSwipedIds(seenIds);
-        setHasFetchedSwipes(true);
+        try {
+            const swipesSnapshot = await getDocs(swipesQuery);
+            const seenIds = swipesSnapshot.docs.map((doc) => doc.data().targetId);
+            setSwipedIds(seenIds);
+        } catch (e) {
+            console.error("Failed to fetch swipes", e);
+        } finally {
+            setHasFetchedSwipes(true);
+        }
     };
 
     fetchSwipedUsers();
-  }, [user, firestore, hasFetchedSwipes]);
+  }, [user, firestore]);
 
   // 2. Query for users, excluding self and already swiped users.
   const usersToExclude = useMemo(() => {
-      if(!user) return ['']; // Return a non-empty array for 'not-in' query
+      // Create a non-empty array for the 'not-in' query to work.
+      // Firestore 'not-in' queries cannot be called with an empty array.
+      if (!user) return ['placeholder']; 
       return [user.uid, ...swipedIds];
   }, [user, swipedIds]);
 
   const potentialMatchesQuery = useMemoFirebase(() => {
+    // Wait until we have the list of users to exclude.
     if (!user || !firestore || !hasFetchedSwipes || usersToExclude.length === 0) return null;
+    
     return query(
         collection(firestore, 'users'),
         where('uid', 'not-in', usersToExclude),
@@ -80,41 +91,88 @@ export default function MatchCard() {
       }
   }, [profilesError, toast]);
 
+  const checkForMatch = async (targetUserId: string) => {
+    if (!user || !firestore) return;
+    const matchQuery = query(
+      collection(firestore, 'swipes'),
+      where('swiperId', '==', targetUserId),
+      where('targetId', '==', user.uid),
+      where('direction', '==', 'right'),
+      limit(1)
+    );
 
-  const handleSwipe = (direction: 'left' | 'right') => {
-    if (!user || !swipesCollection || !profiles || profiles.length === 0) return;
+    const matchSnapshot = await getDocs(matchQuery);
+    return !matchSnapshot.empty;
+  };
+
+  const handleSwipe = async (direction: 'left' | 'right') => {
+    if (!user || !firestore || !profiles || profiles.length === 0) return;
 
     const targetUser = profiles[currentIndex];
     if (!targetUser) return;
     
     setIsSwiping(true);
 
-    const swipeData = {
-        swiperId: user.uid,
-        targetId: targetUser.uid,
-        direction: direction,
-        timestamp: serverTimestamp(),
-      };
+    try {
+        const batch = writeBatch(firestore);
 
-    addDoc(swipesCollection, swipeData).catch(error => {
+        // Record the current user's swipe
+        const swipeRef = doc(collection(firestore, 'swipes'));
+        batch.set(swipeRef, {
+            swiperId: user.uid,
+            targetId: targetUser.uid,
+            direction,
+            timestamp: serverTimestamp(),
+        });
+
+        // If it's a right swipe, check for a match
+        if (direction === 'right') {
+            const isMatch = await checkForMatch(targetUser.uid);
+            if (isMatch) {
+                // It's a match! Create a match document.
+                const matchRef = doc(collection(firestore, 'matches'));
+                batch.set(matchRef, {
+                    users: [user.uid, targetUser.uid],
+                    createdAt: serverTimestamp(),
+                });
+
+                // Create a conversation document as well
+                const conversationRef = doc(firestore, 'conversations', matchRef.id);
+                batch.set(conversationRef, {
+                    users: [user.uid, targetUser.uid],
+                    lastMessage: 'You matched! Say hello!',
+                    updatedAt: serverTimestamp(),
+                });
+
+                toast({
+                    title: "It's a Match!",
+                    description: `You and ${targetUser.name} have liked each other.`,
+                });
+            } else {
+                 toast({
+                    title: "Swipe recorded!",
+                    description: "We'll let you know if it's a match.",
+                });
+            }
+        }
+
+        await batch.commit();
+
+    } catch (error) {
+        console.error("Error during swipe operation:", error);
         errorEmitter.emit(
             'permission-error',
             new FirestorePermissionError({
-                path: swipesCollection.path,
-                operation: 'create',
-                requestResourceData: swipeData,
+                path: 'swipes', // Path can be more generic for a batch write
+                operation: 'write',
+                requestResourceData: { action: 'swipe', target: targetUser.uid }
             })
         )
-    }).finally(() => {
-        if (direction === 'right') {
-            toast({
-                title: "Swipe recorded!",
-                description: "We'll let you know if it's a match.",
-            });
-        }
+    } finally {
+        // Move to the next profile
         setCurrentIndex((prevIndex) => prevIndex + 1);
         setIsSwiping(false);
-    });
+    }
   };
 
   const isLoading = isLoadingProfiles || !hasFetchedSwipes;
