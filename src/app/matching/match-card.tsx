@@ -49,18 +49,20 @@ export default function MatchCard() {
         const swipesSnapshot = await getDocs(swipesQuery);
         const swipedIds = swipesSnapshot.docs.map((doc) => doc.data().targetId);
 
-        // 2. Query for users, excluding self and already swiped users
+        // 2. Query for users, excluding self and already swiped users.
+        // We need at least one user to exclude, so we always add the current user.
         const usersToExclude = [user.uid, ...swipedIds];
-
+        
+        // Firestore's 'not-in' query requires a non-empty array.
         const usersQuery = query(
             collection(firestore, 'users'),
-            limit(20)
+            where('uid', 'not-in', usersToExclude),
+            limit(10)
         );
 
         const usersSnapshot = await getDocs(usersQuery);
         const potentialMatches = usersSnapshot.docs
-            .map(doc => ({ id: doc.id, ...doc.data() } as UserProfile))
-            .filter(profile => !usersToExclude.includes(profile.uid));
+            .map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
 
 
         setProfiles(potentialMatches);
