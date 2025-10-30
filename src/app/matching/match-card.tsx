@@ -158,12 +158,11 @@ export default function MatchCard() {
             }
         }
         
-        // This commit was missing a success toast for non-match swipes
         await batch.commit();
 
-        if (direction === 'left' || (direction === 'right' && !(await checkForMatch(targetUser.uid)))) {
+        if (direction === 'left') {
              toast({
-                title: "Swipe recorded!",
+                title: "Passed!",
                 description: "Your choice has been saved.",
             });
         }
