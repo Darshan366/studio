@@ -56,9 +56,8 @@ export default function MealPlanner() {
       <AnimatePresence>
         <motion.div
           key={isExpanded ? 'expanded' : 'collapsed'}
-          initial={{ width: isExpanded ? '80%' : '100%' }}
+          initial={{ width: '100%' }}
           animate={{ width: isExpanded ? '100%' : '80%' }}
-          exit={{ width: isExpanded ? '80%' : '100%' }}
           transition={{ duration: 0.4, ease: 'easeInOut' }}
           className="mx-auto"
         >
