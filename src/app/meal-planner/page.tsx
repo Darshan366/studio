@@ -1,9 +1,17 @@
-"use client";
 
-import { useState } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { PlusCircle, Utensils, Sparkles } from "lucide-react";
+'use client';
+
+import React, { useState } from 'react';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { PlusCircle, Utensils, Sparkles, Bot } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 type MealPlan = {
   [key: string]: string[];
@@ -11,26 +19,16 @@ type MealPlan = {
 
 export default function MealPlanner() {
   const [mealPlan, setMealPlan] = useState<MealPlan>({
-    Monday: ["Overnight Oats", "Chicken Salad", "Turkey Stuffed Peppers"],
-    Tuesday: ["Egg Muffins", "Chicken Salad", "Lentil Soup"],
-    Wednesday: ["Egg Muffins", "Chicken Salad", "Lentil Soup"],
-    Thursday: ["Overnight Oats", "Smoothie", "Salmon and Asparagus"],
-    Friday: ["Overnight Oats", "Quinoa and Black Bean Bowl", "Lentil Soup"],
+    Monday: ['Overnight Oats', 'Chicken Salad', 'Turkey Stuffed Peppers'],
+    Tuesday: ['Egg Muffins', 'Chicken Salad', 'Lentil Soup'],
+    Wednesday: ['Egg Muffins', 'Chicken Salad', 'Lentil Soup'],
+    Thursday: ['Overnight Oats', 'Smoothie', 'Salmon and Asparagus'],
+    Friday: ['Overnight Oats', 'Quinoa and Black Bean Bowl', 'Lentil Soup'],
     Saturday: [],
     Sunday: [],
   });
 
-  const resetMealPlan = () => {
-    setMealPlan({
-      Monday: [],
-      Tuesday: [],
-      Wednesday: [],
-      Thursday: [],
-      Friday: [],
-      Saturday: [],
-      Sunday: [],
-    });
-  };
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -40,86 +38,108 @@ export default function MealPlanner() {
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Utensils className="w-7 h-7" /> Meal Planner
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Plan your meals according to your fitness goals and body type.
-          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-sm text-muted-foreground">
+              Plan your meals according to your fitness goals and body type.
+            </p>
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Toggle Table Size"
+            >
+              <Utensils size={16} />
+            </button>
+          </div>
         </div>
-        <Button variant="outline" onClick={resetMealPlan}>
-          Reset Meal Plan
-        </Button>
       </div>
 
       {/* Weekly Plan */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Weekly Plan</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="p-3 text-sm font-semibold">Day of the Week</th>
-                <th className="p-3 text-sm font-semibold">Meals</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.keys(mealPlan).map((day) => (
-                <tr key={day} className="border-b border-border">
-                  <td className="p-3 font-medium">{day}</td>
-                  <td className="p-3 space-y-1">
-                    {mealPlan[day].length ? (
-                      mealPlan[day].map((meal, idx) => (
-                        <div
-                          key={idx}
-                          className="px-3 py-1 bg-muted rounded-lg text-sm flex justify-between items-center"
-                        >
-                          <span>{meal}</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-xs"
-                            onClick={() => {
-                              const updated = { ...mealPlan };
-                              updated[day] = updated[day].filter((_, i) => i !== idx);
-                              setMealPlan(updated);
-                            }}
-                          >
-                            ✕
-                          </Button>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-muted-foreground text-sm">No meals added yet</p>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="mt-1 flex items-center gap-1 text-xs"
-                      onClick={() => {
-                        const newMeal = prompt(`Add a new meal for ${day}:`);
-                        if (newMeal) {
-                          const updated = { ...mealPlan };
-                          updated[day].push(newMeal);
-                          setMealPlan(updated);
-                        }
-                      }}
+      <motion.div
+        animate={{ width: isExpanded ? '100%' : '80%' }}
+        transition={{ duration: 0.4, ease: 'easeInOut' }}
+        className="mx-auto"
+      >
+        <Card className="border-0 shadow-none">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="p-3 text-sm font-semibold">
+                      Day of the Week
+                    </th>
+                    <th className="p-3 text-sm font-semibold">Meals</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.keys(mealPlan).map((day) => (
+                    <tr
+                      key={day}
+                      className="border-b border-border last:border-b-0"
                     >
-                      <PlusCircle className="w-3 h-3" /> Add Meal
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+                      <td className="p-3 font-medium">{day}</td>
+                      <td className="p-3 space-y-1">
+                        {mealPlan[day].length > 0 ? (
+                          mealPlan[day].map((meal, idx) => (
+                            <div
+                              key={idx}
+                              className="px-3 py-1 bg-muted rounded-lg text-sm flex justify-between items-center"
+                            >
+                              <span>{meal}</span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs"
+                                onClick={() => {
+                                  const updated = { ...mealPlan };
+                                  updated[day] = updated[day].filter(
+                                    (_, i) => i !== idx
+                                  );
+                                  setMealPlan(updated);
+                                }}
+                              >
+                                ✕
+                              </Button>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-muted-foreground text-sm">
+                            No meals added yet
+                          </p>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="mt-1 flex items-center gap-1 text-xs"
+                          onClick={() => {
+                            const newMeal = prompt(
+                              `Add a new meal for ${day}:`
+                            );
+                            if (newMeal) {
+                              const updated = { ...mealPlan };
+                              updated[day].push(newMeal);
+                              setMealPlan(updated);
+                            }
+                          }}
+                        >
+                          <PlusCircle className="w-3 h-3" /> Add Meal
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Floating AI Button */}
       <button
-        className="fixed bottom-8 right-8 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full p-4 shadow-lg transition-all"
+        className="fixed bottom-8 right-8 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full p-4 shadow-lg transition-all hover:scale-105"
         onClick={() => alert('AI Assistant coming soon!')}
       >
-        <Sparkles className="w-6 h-6" />
+        <Bot className="w-6 h-6" />
       </button>
     </div>
   );
