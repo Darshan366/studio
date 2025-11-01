@@ -9,9 +9,8 @@ import {
   CardContent,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Utensils, Sparkles, Bot } from 'lucide-react';
+import { PlusCircle, Utensils, Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
 
 type MealPlan = {
   [key: string]: string[];
@@ -54,85 +53,90 @@ export default function MealPlanner() {
       </div>
 
       {/* Weekly Plan */}
-      <motion.div
-        animate={{ width: isExpanded ? '100%' : '80%' }}
-        transition={{ duration: 0.4, ease: 'easeInOut' }}
-        className="mx-auto"
-      >
-        <Card className="border-0 shadow-none">
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="p-3 text-sm font-semibold">
-                      Day of the Week
-                    </th>
-                    <th className="p-3 text-sm font-semibold">Meals</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.keys(mealPlan).map((day) => (
-                    <tr
-                      key={day}
-                      className="border-b border-border last:border-b-0"
-                    >
-                      <td className="p-3 font-medium">{day}</td>
-                      <td className="p-3 space-y-1">
-                        {mealPlan[day].length > 0 ? (
-                          mealPlan[day].map((meal, idx) => (
-                            <div
-                              key={idx}
-                              className="px-3 py-1 bg-muted rounded-lg text-sm flex justify-between items-center"
-                            >
-                              <span>{meal}</span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-xs"
-                                onClick={() => {
-                                  const updated = { ...mealPlan };
-                                  updated[day] = updated[day].filter(
-                                    (_, i) => i !== idx
-                                  );
-                                  setMealPlan(updated);
-                                }}
-                              >
-                                ✕
-                              </Button>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-muted-foreground text-sm">
-                            No meals added yet
-                          </p>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="mt-1 flex items-center gap-1 text-xs"
-                          onClick={() => {
-                            const newMeal = prompt(
-                              `Add a new meal for ${day}:`
-                            );
-                            if (newMeal) {
-                              const updated = { ...mealPlan };
-                              updated[day].push(newMeal);
-                              setMealPlan(updated);
-                            }
-                          }}
-                        >
-                          <PlusCircle className="w-3 h-3" /> Add Meal
-                        </Button>
-                      </td>
+      <AnimatePresence>
+        <motion.div
+          key={isExpanded ? 'expanded' : 'collapsed'}
+          initial={{ width: isExpanded ? '80%' : '100%' }}
+          animate={{ width: isExpanded ? '100%' : '80%' }}
+          exit={{ width: isExpanded ? '80%' : '100%' }}
+          transition={{ duration: 0.4, ease: 'easeInOut' }}
+          className="mx-auto"
+        >
+          <Card className="border-0 shadow-none">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="p-3 text-sm font-semibold text-muted-foreground">
+                        Day of the Week
+                      </th>
+                      <th className="p-3 text-sm font-semibold text-muted-foreground">Meals</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+                  </thead>
+                  <tbody>
+                    {Object.keys(mealPlan).map((day) => (
+                      <tr
+                        key={day}
+                        className="border-b border-border last:border-b-0 transition-colors hover:bg-muted/50"
+                      >
+                        <td className="p-3 font-medium">{day}</td>
+                        <td className="p-3 space-y-1">
+                          {mealPlan[day].length > 0 ? (
+                            mealPlan[day].map((meal, idx) => (
+                              <div
+                                key={idx}
+                                className="px-3 py-1 bg-muted rounded-lg text-sm flex justify-between items-center"
+                              >
+                                <span>{meal}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-xs"
+                                  onClick={() => {
+                                    const updated = { ...mealPlan };
+                                    updated[day] = updated[day].filter(
+                                      (_, i) => i !== idx
+                                    );
+                                    setMealPlan(updated);
+                                  }}
+                                >
+                                  ✕
+                                </Button>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-muted-foreground text-sm">
+                              No meals added yet
+                            </p>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="mt-1 flex items-center gap-1 text-xs"
+                            onClick={() => {
+                              const newMeal = prompt(
+                                `Add a new meal for ${day}:`
+                              );
+                              if (newMeal) {
+                                const updated = { ...mealPlan };
+                                updated[day].push(newMeal);
+                                setMealPlan(updated);
+                              }
+                            }}
+                          >
+                            <PlusCircle className="w-3 h-3" /> Add Meal
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </AnimatePresence>
 
       {/* Floating AI Button */}
       <button
