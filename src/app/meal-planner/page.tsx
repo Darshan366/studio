@@ -4,8 +4,6 @@
 import React, { useState } from 'react';
 import {
   Card,
-  CardHeader,
-  CardTitle,
   CardContent,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -56,7 +54,7 @@ export default function MealPlanner() {
       <AnimatePresence>
         <motion.div
           key={isExpanded ? 'expanded' : 'collapsed'}
-          initial={{ width: '100%' }}
+          initial={{ width: '80%' }}
           animate={{ width: isExpanded ? '100%' : '80%' }}
           transition={{ duration: 0.4, ease: 'easeInOut' }}
           className="mx-auto"
@@ -146,4 +144,3 @@ export default function MealPlanner() {
       </button>
     </div>
   );
-}
