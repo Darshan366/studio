@@ -1,12 +1,10 @@
+
 'use client';
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Flame, Bot, Dumbbell, Settings, RotateCcw, PlusCircle, Trash2 } from 'lucide-react';
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card';
+import { Flame, Bot, Dumbbell, Settings, RotateCcw, PlusCircle, Trash2, X } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -41,16 +39,20 @@ export default function SchedulePage() {
   const [flippedIndex, setFlippedIndex] = useState<number | null>(null);
   const [isEditing, setIsEditing] = useState<number | null>(null);
   const [editingData, setEditingData] = useState<any>(null);
+  const [expandedCard, setExpandedCard] = useState<number | null>(null);
   const { toast } = useToast();
 
   const handleCardClick = (index: number) => {
-    // Prevent flipping if edit mode is active
     if (isEditing !== null) return;
     setFlippedIndex(flippedIndex === index ? null : index);
   };
   
+  const handleDoubleClick = (index: number) => {
+    setExpandedCard(index);
+  }
+
   const handleEditClick = (e: React.MouseEvent, index: number) => {
-    e.stopPropagation(); // Prevent card from flipping
+    e.stopPropagation();
     const workoutToEdit = weeklyWorkouts[index];
     setEditingData({ ...workoutToEdit, exercises: [...workoutToEdit.exercises.map(ex => ({...ex}))] });
     setIsEditing(index);
@@ -70,12 +72,7 @@ export default function SchedulePage() {
   };
   
   const handleResetSchedule = () => {
-    setWeeklyWorkouts(initialWorkouts.map(w => ({
-      ...w,
-      workout: w.day === 'Sunday' ? 'Rest Day' : '',
-      progress: w.day === 'Sunday' ? 0 : 0,
-      exercises: [],
-    })));
+    setWeeklyWorkouts(initialWorkouts);
     toast({
         title: "Schedule Reset",
         description: "Your workout schedule has been reset. ✅",
@@ -116,11 +113,13 @@ export default function SchedulePage() {
         {weeklyWorkouts.map((item, index) => (
           <motion.div
             key={item.day}
+            layoutId={`card-container-${index}`}
             className={cn(
-              'relative group', // Add group for hover state
-              index === 6 && 'lg:col-start-2' // Center the last card on large screens
+              'relative group',
+              index === 6 && 'lg:col-start-2'
             )}
             style={{ perspective: 1000 }}
+            onDoubleClick={() => handleDoubleClick(index)}
           >
             <motion.div
               className="relative w-full h-48 cursor-pointer"
@@ -189,6 +188,46 @@ export default function SchedulePage() {
         ))}
       </div>
       
+      <AnimatePresence>
+        {expandedCard !== null && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md">
+            <motion.div
+              layoutId={`card-container-${expandedCard}`}
+              className="w-[90%] max-w-2xl h-auto bg-card/90 rounded-2xl shadow-2xl"
+              style={{ perspective: 1000 }}
+            >
+              <Card className="relative h-full w-full flex flex-col justify-start p-8 bg-transparent border-0">
+                  <button
+                    onClick={() => setExpandedCard(null)}
+                    className="absolute top-4 right-4 text-muted-foreground hover:text-foreground z-10"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                  <h2 className="text-5xl font-bold mb-2">{weeklyWorkouts[expandedCard].day}</h2>
+                  <p className="text-7xl font-extrabold text-foreground/5 uppercase tracking-tighter -mt-2">Workout Plan</p>
+                  
+                  <div className="mt-8 text-lg text-muted-foreground">
+                      <h4 className="text-2xl font-semibold text-foreground mb-4">{weeklyWorkouts[expandedCard].workout}</h4>
+                      {weeklyWorkouts[expandedCard].exercises.length > 0 ? (
+                          <ul className="space-y-3">
+                              {weeklyWorkouts[expandedCard].exercises.map((ex, i) => (
+                                  <li key={i} className="flex items-center gap-4">
+                                    <Dumbbell className="h-5 w-5 text-primary"/>
+                                    <span>{ex.name}: <span className="font-mono text-foreground/80">{ex.sets}</span></span>
+                                  </li>
+                              ))}
+                          </ul>
+                      ) : (
+                          <p>No exercises planned for today.</p>
+                      )}
+                  </div>
+              </Card>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+
        {/* Reset Button */}
       <div className="flex justify-center mt-4">
         <Button onClick={handleResetSchedule} variant="outline">
