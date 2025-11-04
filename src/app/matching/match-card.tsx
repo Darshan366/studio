@@ -29,17 +29,21 @@ export default function MatchCard() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
   
-  // Query for all users, excluding the current user.
+  // Query for all users. We will filter the current user out on the client.
   const potentialMatchesQuery = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
+    if (!firestore) return null;
     
     return query(
         collection(firestore, 'users'),
-        where('uid', '!=', user.uid)
     );
-  }, [user, firestore]);
+  }, [firestore]);
 
   const { data: profiles, isLoading: isLoadingProfiles, error: profilesError } = useCollection<UserProfile>(potentialMatchesQuery);
+
+  const filteredProfiles = useMemo(() => {
+      if (!profiles || !user) return [];
+      return profiles.filter(p => p.uid !== user.uid);
+  }, [profiles, user]);
 
   useEffect(() => {
       if(profilesError) {
@@ -66,9 +70,9 @@ export default function MatchCard() {
   };
 
   const handleSwipe = async (direction: 'left' | 'right') => {
-    if (!user || !firestore || !profiles || profiles.length === 0) return;
+    if (!user || !firestore || filteredProfiles.length === 0) return;
 
-    const targetUser = profiles[currentIndex];
+    const targetUser = filteredProfiles[currentIndex];
     if (!targetUser) return;
     
     setIsSwiping(true);
@@ -138,9 +142,7 @@ export default function MatchCard() {
     )
   }
 
-  const currentProfiles = profiles || [];
-
-  if (currentProfiles.length === 0 || currentIndex >= currentProfiles.length) {
+  if (filteredProfiles.length === 0 || currentIndex >= filteredProfiles.length) {
     return (
       <Card className="flex h-[500px] items-center justify-center">
         <CardContent className="text-center">
@@ -151,7 +153,7 @@ export default function MatchCard() {
     );
   }
 
-  const currentProfile = currentProfiles[currentIndex];
+  const currentProfile = filteredProfiles[currentIndex];
 
   return (
     <div className="relative">

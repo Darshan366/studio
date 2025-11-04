@@ -13,7 +13,9 @@
           "enum": ["Beginner", "Intermediate", "Advanced"]
         },
         "photoURL": { "type": "string", "description": "URL of the user's profile picture." },
-        "bio": { "type": "string", "description": "A short bio about the user." }
+        "bio": { "type": "string", "description": "A short bio about the user." },
+        "latitude": { "type": "number", "description": "The user's latitude." },
+        "longitude": { "type": "number", "description": "The user's longitude." }
       },
       "required": ["uid", "name", "email", "fitnessLevel"]
     },

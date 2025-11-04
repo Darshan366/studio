@@ -10,11 +10,12 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
-import { useUser, useAuth, useFirebaseApp } from "@/firebase"
+import { useUser, useAuth, useFirebaseApp, useFirestore } from "@/firebase"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
@@ -24,10 +25,13 @@ import { updateProfile } from "firebase/auth"
 import { useToast } from "@/hooks/use-toast"
 import { useState, useRef, useEffect } from "react"
 import { Loader2, User } from "lucide-react"
+import { doc } from "firebase/firestore"
+import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates"
 
 const profileFormSchema = z.object({
     name: z.string().min(2, { message: "Name must be at least 2 characters." }),
     email: z.string().email(),
+    bio: z.string().max(160, { message: "Bio cannot be longer than 160 characters." }).optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -36,6 +40,7 @@ export default function SettingsPage() {
     const { user, isUserLoading } = useUser();
     const auth = useAuth();
     const app = useFirebaseApp();
+    const firestore = useFirestore();
     const storage = getStorage(app);
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,17 +52,21 @@ export default function SettingsPage() {
         values: {
             name: user?.displayName || '',
             email: user?.email || '',
+            bio: '',
         },
     });
 
     useEffect(() => {
-        if(user) {
+        if(user && firestore) {
+            // You would typically fetch the user profile from Firestore here
+            // to get fields like 'bio'. For now, we'll just reset form fields.
             form.reset({
                 name: user.displayName || '',
                 email: user.email || '',
+                bio: '' // This would be populated from Firestore profile
             });
         }
-    }, [user, form]);
+    }, [user, firestore, form]);
 
     const handleAvatarClick = () => {
         fileInputRef.current?.click();
@@ -74,12 +83,15 @@ export default function SettingsPage() {
             const photoURL = await getDownloadURL(storageRef);
 
             await updateProfile(user, { photoURL });
+            
+            const userDocRef = doc(firestore, 'users', user.uid);
+            updateDocumentNonBlocking(userDocRef, { photoURL });
+
 
             toast({
                 title: "Avatar Updated",
                 description: "Your new avatar has been saved.",
             });
-            // This will trigger re-render in components using useUser
         } catch (error) {
             console.error("Error uploading avatar:", error);
             toast({
@@ -100,7 +112,13 @@ export default function SettingsPage() {
             if (data.name !== user.displayName) {
                 await updateProfile(user, { displayName: data.name });
             }
-            // Note: Email update requires more complex verification, not implemented here.
+            
+            const userDocRef = doc(firestore, 'users', user.uid);
+            updateDocumentNonBlocking(userDocRef, {
+                name: data.name,
+                bio: data.bio
+            });
+
             toast({
                 title: "Profile Updated",
                 description: "Your profile information has been saved.",
@@ -170,6 +188,11 @@ export default function SettingsPage() {
                   <Label htmlFor="name">Name</Label>
                   <Input id="name" {...form.register("name")} defaultValue={user?.displayName || ''} />
                   {form.formState.errors.name && <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>}
+                </div>
+                 <div className="space-y-2">
+                  <Label htmlFor="bio">Bio</Label>
+                  <Textarea id="bio" {...form.register("bio")} placeholder="Tell us a little about yourself."/>
+                  {form.formState.errors.bio && <p className="text-sm text-destructive">{form.formState.errors.bio.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>

@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc } from 'firebase/firestore';
+import { doc, serverTimestamp } from 'firebase/firestore';
 import { useAuth, useFirestore } from '@/firebase';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
+import { Textarea } from '@/components/ui/textarea';
 
 
 const formSchema = z.object({
@@ -46,6 +47,7 @@ const formSchema = z.object({
     .string()
     .min(6, { message: 'Password must be at least 6 characters.' }),
   fitnessLevel: z.enum(['Beginner', 'Intermediate', 'Advanced']),
+  bio: z.string().max(160, { message: "Bio cannot be longer than 160 characters." }).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -64,6 +66,7 @@ export default function SignupPage() {
       email: '',
       password: '',
       fitnessLevel: 'Beginner',
+      bio: '',
     },
   });
 
@@ -88,7 +91,8 @@ export default function SignupPage() {
         name: data.name,
         email: data.email,
         fitnessLevel: data.fitnessLevel,
-        createdAt: new Date(),
+        bio: data.bio || '',
+        createdAt: serverTimestamp(),
       }, { merge: true });
 
       // The AuthLayout will handle redirecting the user to the home page
@@ -160,6 +164,19 @@ export default function SignupPage() {
                     <FormLabel>Password</FormLabel>
                     <FormControl>
                       <Input type="password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="bio"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bio</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Tell us a little about yourself." {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
