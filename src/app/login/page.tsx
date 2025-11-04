@@ -59,8 +59,6 @@ export default function LoginPage() {
        let description = 'An unexpected error occurred. Please try again.';
        if (error instanceof FirebaseError) {
          switch (error.code) {
-           case 'auth/user-not-found':
-           case 'auth/wrong-password':
            case 'auth/invalid-credential':
              description = 'Invalid email or password. Please try again.';
              break;
