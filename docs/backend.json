@@ -70,6 +70,45 @@
         "timestamp": { "type": "string", "format": "date-time" }
       },
       "required": ["senderId", "text", "timestamp"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "type": "object",
+      "description": "Represents a notification for a user.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["match", "message"],
+          "description": "The type of notification."
+        },
+        "matchId": {
+          "type": "string",
+          "description": "The ID of the match associated with the notification."
+        },
+        "senderId": {
+          "type": "string",
+          "description": "The UID of the user who triggered the notification."
+        },
+        "senderName": {
+          "type": "string",
+          "description": "The name of the user who triggered the notification."
+        },
+        "senderPhoto": {
+          "type": "string",
+          "description": "The photo URL of the user who triggered the notification."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["unread", "read", "accepted", "ignored"],
+          "description": "The status of the notification."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time the notification was created."
+        }
+      },
+      "required": ["type", "senderId", "senderName", "status", "timestamp"]
     }
   },
   "auth": {
@@ -95,6 +134,10 @@
     "/conversations/{matchId}/messages/{messageId}": {
       "schema": { "$ref": "#/entities/Message" },
       "description": "Sub-collection for messages within a conversation."
+    },
+    "/notifications/{userId}/user_notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "Stores notifications for a specific user."
     }
   }
 }

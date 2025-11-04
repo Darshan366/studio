@@ -10,10 +10,11 @@
  * - /matches/{matchId}: Stores mutual matches.
  * - /conversations/{matchId}: Stores conversation metadata.
  * - /conversations/{matchId}/messages/{messageId}: Sub-collection for messages within a conversation.
+ * - /notifications/{userId}/user_notifications/{notificationId}: Stores notifications for a user.
  *
  * Key Security Decisions:
  * - Public read access to user profiles, matches, and conversations.
- * - Owner-only write access to user profiles and swipes.
+ * - Owner-only write access to user profiles, swipes and notifications.
  * - Participants-only write access to conversations and messages.
  * - Server-side creation of matches.
  */
@@ -96,6 +97,19 @@ service cloud.firestore {
       allow list: if true;
       allow create: if get(/databases/$(database)/documents/conversations/$(matchId)).data.users.hasAny([request.auth.uid]);
       allow update: if false;
+      allow delete: if false;
+    }
+    
+    /**
+     * @description Rules for user notifications.
+     * @path /notifications/{userId}/user_notifications/{notificationId}
+     * @allow (list, get, update): Only the owner can read or update their notifications.
+     * @allow (create): Any authenticated user can create a notification (e.g., a match).
+     * @deny (delete): No one can delete notifications.
+     */
+    match /notifications/{userId}/user_notifications/{notificationId} {
+      allow list, get, update: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
       allow delete: if false;
     }
   }

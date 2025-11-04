@@ -29,21 +29,30 @@ export default function MatchCard() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
   
-  // Query for all users. We will filter the current user out on the client.
+  const matchesQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, 'matches'), where('users', 'array-contains', user.uid));
+  }, [user, firestore]);
+
+  const { data: matches } = useCollection(matchesQuery);
+
+  const matchedUserIds = useMemo(() => {
+    if (!matches || !user) return new Set([user?.uid]);
+    const ids = new Set(matches.flatMap(m => m.users));
+    return ids;
+  }, [matches, user]);
+
   const potentialMatchesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    
-    return query(
-        collection(firestore, 'users'),
-    );
+    return query(collection(firestore, 'users'));
   }, [firestore]);
 
   const { data: profiles, isLoading: isLoadingProfiles, error: profilesError } = useCollection<UserProfile>(potentialMatchesQuery);
 
   const filteredProfiles = useMemo(() => {
-      if (!profiles || !user) return [];
-      return profiles.filter(p => p.uid !== user.uid);
-  }, [profiles, user]);
+      if (!profiles || matchedUserIds.size === 0) return [];
+      return profiles.filter(p => !matchedUserIds.has(p.uid));
+  }, [profiles, matchedUserIds]);
 
   useEffect(() => {
       if(profilesError) {
@@ -93,19 +102,41 @@ export default function MatchCard() {
     if (direction === 'right') {
         const isMatch = await checkForMatch(targetUser.uid);
         if (isMatch) {
-            // It's a match! Create a match document.
             const matchRef = doc(collection(firestore, 'matches'));
             batch.set(matchRef, {
                 users: [user.uid, targetUser.uid],
                 createdAt: serverTimestamp(),
             });
 
-            // Create a conversation document as well
             const conversationRef = doc(firestore, 'conversations', matchRef.id);
             batch.set(conversationRef, {
                 users: [user.uid, targetUser.uid],
                 lastMessage: 'You matched! Say hello!',
                 updatedAt: serverTimestamp(),
+            });
+
+            // Create notification for the target user
+            const targetNotificationRef = doc(collection(firestore, `notifications/${targetUser.uid}/user_notifications`));
+            batch.set(targetNotificationRef, {
+                matchId: matchRef.id,
+                senderId: user.uid,
+                senderName: user.displayName,
+                senderPhoto: user.photoURL,
+                type: 'match',
+                status: 'unread',
+                timestamp: serverTimestamp(),
+            });
+
+            // Create notification for the current user
+            const currentUserNotificationRef = doc(collection(firestore, `notifications/${user.uid}/user_notifications`));
+            batch.set(currentUserNotificationRef, {
+                matchId: matchRef.id,
+                senderId: targetUser.uid,
+                senderName: targetUser.name,
+                senderPhoto: targetUser.photoURL,
+                type: 'match',
+                status: 'unread',
+                timestamp: serverTimestamp(),
             });
 
             toast({
@@ -123,7 +154,6 @@ export default function MatchCard() {
       });
       errorEmitter.emit('permission-error', permissionError);
     }).finally(() => {
-        // Move to the next profile
         setCurrentIndex((prevIndex) => prevIndex + 1);
         setIsSwiping(false);
     });

@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
+import NotificationBell from '@/components/notification-bell';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -117,7 +118,10 @@ export default function AppHeader() {
         <SidebarTrigger className="md:hidden" />
         <h1 className="hidden text-lg font-semibold md:block">{title}</h1>
       </div>
-      <UserMenu />
+      <div className="flex items-center gap-2">
+        <NotificationBell />
+        <UserMenu />
+      </div>
     </header>
   );
 }
