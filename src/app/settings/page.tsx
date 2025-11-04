@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -14,8 +15,9 @@ import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { updateProfile } from "firebase/auth"
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from "@/hooks/use-toast"
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 import { Loader2, User, Dumbbell, Heart, Camera, BarChart3, Trophy, Flame } from "lucide-react"
 import { doc } from "firebase/firestore"
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates"
@@ -51,6 +53,7 @@ function EditProfileForm() {
 
     useEffect(() => {
         if(user && firestore) {
+            // A more robust way to get profile data would be to fetch it from the 'users' collection
             form.reset({
                 name: user.displayName || '',
                 bio: '', 
@@ -61,11 +64,11 @@ function EditProfileForm() {
 
 
     const onSubmit = async (data: ProfileFormValues) => {
-        if (!user) return;
+        if (!user || !auth.currentUser) return;
         setIsSubmitting(true);
         try {
             if (data.name !== user.displayName) {
-                await updateProfile(auth.currentUser!, { displayName: data.name });
+                await updateProfile(auth.currentUser, { displayName: data.name });
             }
             
             const userDocRef = doc(firestore, 'users', user.uid);
@@ -165,6 +168,57 @@ const statCards = [
 
 export default function SettingsPage() {
     const { user } = useUser();
+    const auth = useAuth();
+    const app = useFirebaseApp();
+    const { toast } = useToast();
+    const [isUploading, setIsUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleAvatarClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file || !user || !auth.currentUser) return;
+        
+        if (!file.type.startsWith("image/")) {
+          toast({
+            variant: "destructive",
+            title: "Invalid File Type",
+            description: "Please select a valid image file (.jpg, .png).",
+          });
+          return;
+        }
+
+        setIsUploading(true);
+        const storage = getStorage(app);
+        
+        try {
+            const storageRef = ref(storage, `avatars/${user.uid}`);
+            await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(storageRef);
+            await updateProfile(auth.currentUser, { photoURL: downloadURL });
+            
+            // This is important to make sure the UI updates with the new photoURL
+            await auth.currentUser.reload();
+            // Force a re-render if necessary, though useUser hook should handle it
+            
+            toast({
+                title: 'Avatar Updated',
+                description: 'Your new profile picture looks great!',
+            });
+        } catch (error) {
+            console.error("Error uploading avatar:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Upload Failed',
+                description: 'There was a problem uploading your avatar.',
+            });
+        } finally {
+            setIsUploading(false);
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -193,9 +247,22 @@ export default function SettingsPage() {
                                     <AvatarFallback><User size={40}/></AvatarFallback>
                                 </Avatar>
                                 <div className="absolute inset-0 rounded-full border-2 border-primary/80 animate-pulse-slow"></div>
-                                <Button variant="secondary" size="icon" className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Camera className="h-4 w-4" />
+                                <Button
+                                    variant="secondary"
+                                    size="icon"
+                                    onClick={handleAvatarClick}
+                                    className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                                    disabled={isUploading}
+                                >
+                                    {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
                                 </Button>
+                                <Input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    className="hidden"
+                                    accept="image/png, image/jpeg, image/jpg"
+                                    onChange={handleFileChange}
+                                />
                             </div>
                             
                             <div className="mt-4 md:mt-0 md:ml-6">

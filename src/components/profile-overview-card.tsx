@@ -22,6 +22,7 @@ const statCards = [
 /**
  * @deprecated This component is deprecated and will be removed in a future version.
  * The profile overview functionality has been integrated directly into the settings page.
+ * Please use `src/app/settings/page.tsx` instead.
  */
 export default function ProfileOverviewCard() {
   const { user } = useUser();
@@ -45,7 +46,10 @@ export default function ProfileOverviewCard() {
       await uploadBytes(storageRef, file);
       const photoURL = await getDownloadURL(storageRef);
 
-      await updateProfile(user, { photoURL });
+      if (user) {
+        await updateProfile(user, { photoURL });
+      }
+
 
       toast({
         title: 'Avatar Updated',
@@ -110,5 +114,7 @@ export default function ProfileOverviewCard() {
     </Card>
   );
 }
+
+    
 
     
