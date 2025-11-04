@@ -80,9 +80,12 @@ export default function SignupPage() {
       );
       const user = userCredential.user;
       
+      // Update profile and then reload to ensure data is fresh
       await updateProfile(user, {
         displayName: data.name,
       });
+      await user.reload();
+
 
       const userDocRef = doc(firestore, 'users', user.uid);
       
