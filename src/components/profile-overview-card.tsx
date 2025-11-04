@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef } from 'react';
@@ -18,10 +19,13 @@ const statCards = [
   { label: 'Level', value: '4', icon: CheckCircle },
 ];
 
+/**
+ * @deprecated This component is deprecated and will be removed in a future version.
+ * The profile overview functionality has been integrated directly into the settings page.
+ */
 export default function ProfileOverviewCard() {
   const { user } = useUser();
   const app = useFirebaseApp();
-  const storage = getStorage(app);
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -35,6 +39,7 @@ export default function ProfileOverviewCard() {
     if (!file || !user) return;
 
     setIsUploading(true);
+    const storage = getStorage(app);
     try {
       const storageRef = ref(storage, `avatars/${user.uid}`);
       await uploadBytes(storageRef, file);
@@ -105,3 +110,5 @@ export default function ProfileOverviewCard() {
     </Card>
   );
 }
+
+    

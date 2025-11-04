@@ -1,33 +1,29 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { Separator } from "@/components/ui/separator"
 import { useUser, useAuth, useFirebaseApp, useFirestore } from "@/firebase"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage"
 import { updateProfile } from "firebase/auth"
 import { useToast } from "@/hooks/use-toast"
-import { useState, useRef, useEffect } from "react"
-import { Loader2, User, Dumbbell, MapPin, Heart } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Loader2, User, Dumbbell, Heart, Camera, BarChart3, Trophy, Flame } from "lucide-react"
 import { doc } from "firebase/firestore"
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates"
-import ProfileOverviewCard from "@/components/profile-overview-card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import Image from "next/image"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 const profileFormSchema = z.object({
     name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -37,18 +33,17 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-export default function SettingsPage() {
+function EditProfileForm() {
     const { user, isUserLoading } = useUser();
-    const auth = useAuth();
-    const app = useFirebaseApp();
     const firestore = useFirestore();
+    const auth = useAuth();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
     
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
         defaultValues: {
-            name: user?.displayName || '',
+            name: '',
             bio: '',
             fitnessLevel: 'Beginner',
         }
@@ -56,12 +51,10 @@ export default function SettingsPage() {
 
     useEffect(() => {
         if(user && firestore) {
-            // In a real app, you'd fetch the full profile from Firestore here.
-            // For now, we'll reset with what we have and some placeholders.
             form.reset({
                 name: user.displayName || '',
-                bio: '', // This would be populated from the fetched profile
-                fitnessLevel: 'Beginner', // This would also come from the profile
+                bio: '', 
+                fitnessLevel: 'Beginner', 
             });
         }
     }, [user, firestore, form]);
@@ -72,7 +65,7 @@ export default function SettingsPage() {
         setIsSubmitting(true);
         try {
             if (data.name !== user.displayName) {
-                await updateProfile(user, { displayName: data.name });
+                await updateProfile(auth.currentUser!, { displayName: data.name });
             }
             
             const userDocRef = doc(firestore, 'users', user.uid);
@@ -98,126 +91,179 @@ export default function SettingsPage() {
         }
     }
 
-  return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">
-          Manage your profile, preferences, and account settings.
-        </p>
-      </div>
-
-       <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-        <div className="md:col-span-1">
-          <ProfileOverviewCard />
-        </div>
-
-        <div className="md:col-span-2">
+    return (
+      <Card className="border-none bg-transparent shadow-none">
+        <CardContent className="p-4">
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)}>
-                    <Card className="border-border/40 bg-card/80 shadow-lg">
-                    <CardHeader>
-                        <CardTitle>Edit Profile</CardTitle>
-                        <CardDescription>
-                        Update your public information and fitness details.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="flex items-center gap-2 text-muted-foreground"><User size={14}/> Name</FormLabel>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                     <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="flex items-center gap-2 text-muted-foreground"><User size={14}/> Name</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Your Name" {...field} className="bg-muted/40 border-border/30 focus:bg-background/60 transition-all"/>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="bio"
+                        render={({ field }) => (
+                            <FormItem>
+                                 <FormLabel className="flex items-center gap-2 text-muted-foreground"><Heart size={14}/> Bio</FormLabel>
+                                <FormControl>
+                                    <Textarea placeholder="Tell everyone a little about your fitness journey..." {...field} className="bg-muted/40 border-border/30 focus:bg-background/60 transition-all"/>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="fitnessLevel"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="flex items-center gap-2 text-muted-foreground"><Dumbbell size={14}/> Fitness Level</FormLabel>
+                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl>
-                                        <Input placeholder="Your Name" {...field} className="bg-muted/40 border-border/30 focus:bg-background/60 transition-all"/>
+                                    <SelectTrigger className="bg-muted/40 border-border/30 focus:bg-background/60 transition-all">
+                                        <SelectValue placeholder="Select your fitness level" />
+                                    </SelectTrigger>
                                     </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="bio"
-                            render={({ field }) => (
-                                <FormItem>
-                                     <FormLabel className="flex items-center gap-2 text-muted-foreground"><Heart size={14}/> Bio</FormLabel>
-                                    <FormControl>
-                                        <Textarea placeholder="Tell everyone a little about your fitness journey..." {...field} className="bg-muted/40 border-border/30 focus:bg-background/60 transition-all"/>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="fitnessLevel"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="flex items-center gap-2 text-muted-foreground"><Dumbbell size={14}/> Fitness Level</FormLabel>
-                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl>
-                                        <SelectTrigger className="bg-muted/40 border-border/30 focus:bg-background/60 transition-all">
-                                            <SelectValue placeholder="Select your fitness level" />
-                                        </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="Beginner">Beginner</SelectItem>
-                                            <SelectItem value="Intermediate">Intermediate</SelectItem>
-                                            <SelectItem value="Advanced">Advanced</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </CardContent>
-                    <CardFooter>
+                                    <SelectContent>
+                                        <SelectItem value="Beginner">Beginner</SelectItem>
+                                        <SelectItem value="Intermediate">Intermediate</SelectItem>
+                                        <SelectItem value="Advanced">Advanced</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <div>
                         <Button type="submit" disabled={isSubmitting || isUserLoading} className="bg-primary/90 hover:bg-primary text-primary-foreground font-semibold shadow-md transition-all hover:shadow-primary/40 animate-pulse-slow hover:animate-none">
                             {(isSubmitting || isUserLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                             Save Changes
                         </Button>
-                    </CardFooter>
-                    </Card>
+                    </div>
                 </form>
             </Form>
-        </div>
-       </div>
-
-        <Separator />
-        
-        {/* Placeholder for other settings */}
-        <Card className="border-border/40 bg-card/80 shadow-lg">
-            <CardHeader>
-              <CardTitle>Preferences</CardTitle>
-              <CardDescription>
-                Customize notifications and app appearance.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="workout-reminders" className="flex flex-col space-y-1">
-                  <span>Workout Reminders</span>
-                  <span className="font-normal leading-snug text-muted-foreground">
-                    Get reminders for your scheduled workouts.
-                  </span>
-                </Label>
-                <Switch id="workout-reminders" defaultChecked />
-              </div>
-               <div className="flex items-center justify-between">
-                <Label htmlFor="theme" className="flex flex-col space-y-1">
-                  <span>Theme</span>
-                  <span className="font-normal leading-snug text-muted-foreground">
-                    Current theme is set to dark mode.
-                  </span>
-                </Label>
-                <p className="text-sm text-muted-foreground">Dark</p>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button disabled>Save Preferences</Button>
-            </CardFooter>
-          </Card>
-    </div>
-  )
+        </CardContent>
+      </Card>
+    )
 }
+
+const statCards = [
+  { label: 'Workouts', value: '78', icon: Dumbbell },
+  { label: 'Streak', value: '12 days', icon: Flame },
+  { label: 'Level', value: '4', icon: BarChart3 },
+];
+
+export default function SettingsPage() {
+    const { user } = useUser();
+
+    return (
+        <div className="space-y-6">
+            <Card className="overflow-visible border-none bg-transparent shadow-none">
+                <CardContent className="p-0">
+                    <div className="relative h-40 md:h-56 w-full rounded-lg">
+                        <Image
+                            src="https://picsum.photos/seed/cover/1200/400"
+                            alt="Cover image"
+                            className="object-cover rounded-lg"
+                            fill
+                            data-ai-hint="fitness gym"
+                        />
+                         <div className="absolute top-2 right-2">
+                            <Button variant="secondary" size="sm" className="bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm">
+                                <Camera className="mr-2 h-4 w-4" /> Change Cover
+                            </Button>
+                        </div>
+                    </div>
+                    
+                    <div className="relative px-4 md:px-6 -mt-16">
+                        <div className="flex flex-col md:flex-row md:items-end">
+                            <div className="relative h-32 w-32 md:h-40 md:w-40 flex-shrink-0 group">
+                                <Avatar className="h-full w-full border-4 border-background">
+                                    <AvatarImage src={user?.photoURL || `https://picsum.photos/seed/${user?.uid}/200`} alt="User avatar" />
+                                    <AvatarFallback><User size={40}/></AvatarFallback>
+                                </Avatar>
+                                <div className="absolute inset-0 rounded-full border-2 border-primary/80 animate-pulse-slow"></div>
+                                <Button variant="secondary" size="icon" className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Camera className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            
+                            <div className="mt-4 md:mt-0 md:ml-6">
+                                <h1 className="text-2xl md:text-3xl font-bold">{user?.displayName || 'Alex'}</h1>
+                                <p className="text-muted-foreground">Beginner | "Fitness is a journey, not a destination."</p>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+                           {statCards.map(stat => (
+                             <Card key={stat.label} className="bg-muted/40 border-border/30 backdrop-blur-sm">
+                                <CardContent className="p-4 flex items-center gap-4">
+                                    <stat.icon className="h-6 w-6 text-primary" />
+                                    <div>
+                                        <p className="text-xl font-bold">{stat.value}</p>
+                                        <p className="text-xs text-muted-foreground">{stat.label}</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                           ))}
+                            <Card className="bg-muted/40 border-border/30 backdrop-blur-sm">
+                                <CardContent className="p-4 flex items-center gap-4">
+                                    <Trophy className="h-6 w-6 text-yellow-400" />
+                                    <div>
+                                        <p className="text-xl font-bold">12</p>
+                                        <p className="text-xs text-muted-foreground">Achievements</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Tabs defaultValue="workouts" className="w-full mt-6">
+                <TabsList className="grid w-full grid-cols-4 bg-muted/60">
+                    <TabsTrigger value="workouts">Workouts</TabsTrigger>
+                    <TabsTrigger value="progress">Progress</TabsTrigger>
+                    <TabsTrigger value="achievements">Achievements</TabsTrigger>
+                    <TabsTrigger value="edit">Edit Profile</TabsTrigger>
+                </TabsList>
+                <TabsContent value="workouts">
+                    <Card className="bg-card/80 border-border/40">
+                        <CardContent className="p-6 text-center text-muted-foreground">
+                            Workout history will be displayed here.
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="progress">
+                     <Card className="bg-card/80 border-border/40">
+                        <CardContent className="p-6 text-center text-muted-foreground">
+                            Progress charts and stats will be displayed here.
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="achievements">
+                     <Card className="bg-card/80 border-border/40">
+                        <CardContent className="p-6 text-center text-muted-foreground">
+                            Unlocked achievements and badges will be displayed here.
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="edit">
+                    <EditProfileForm />
+                </TabsContent>
+            </Tabs>
+        </div>
+    )
+}
+
+    
