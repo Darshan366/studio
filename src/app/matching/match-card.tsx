@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { Heart, X, Loader2 } from 'lucide-react';
-import { useUser, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
+import { useUser, useFirestore, useMemoFirebase, useCollection, errorEmitter, FirestorePermissionError } from '@/firebase';
 import {
   collection,
   writeBatch,
@@ -77,58 +77,56 @@ export default function MatchCard() {
     
     setIsSwiping(true);
 
-    try {
-        const batch = writeBatch(firestore);
+    const batch = writeBatch(firestore);
 
-        // Record the current user's swipe
-        const swipeRef = doc(collection(firestore, 'swipes'));
-        batch.set(swipeRef, {
-            swiperId: user.uid,
-            targetId: targetUser.uid,
-            direction,
-            timestamp: serverTimestamp(),
-        });
+    // Record the current user's swipe
+    const swipeRef = doc(collection(firestore, 'swipes'));
+    const swipeData = {
+        swiperId: user.uid,
+        targetId: targetUser.uid,
+        direction,
+        timestamp: serverTimestamp(),
+    };
+    batch.set(swipeRef, swipeData);
 
-        // If it's a right swipe, check for a match
-        if (direction === 'right') {
-            const isMatch = await checkForMatch(targetUser.uid);
-            if (isMatch) {
-                // It's a match! Create a match document.
-                const matchRef = doc(collection(firestore, 'matches'));
-                batch.set(matchRef, {
-                    users: [user.uid, targetUser.uid],
-                    createdAt: serverTimestamp(),
-                });
+    // If it's a right swipe, check for a match
+    if (direction === 'right') {
+        const isMatch = await checkForMatch(targetUser.uid);
+        if (isMatch) {
+            // It's a match! Create a match document.
+            const matchRef = doc(collection(firestore, 'matches'));
+            batch.set(matchRef, {
+                users: [user.uid, targetUser.uid],
+                createdAt: serverTimestamp(),
+            });
 
-                // Create a conversation document as well
-                const conversationRef = doc(firestore, 'conversations', matchRef.id);
-                batch.set(conversationRef, {
-                    users: [user.uid, targetUser.uid],
-                    lastMessage: 'You matched! Say hello!',
-                    updatedAt: serverTimestamp(),
-                });
+            // Create a conversation document as well
+            const conversationRef = doc(firestore, 'conversations', matchRef.id);
+            batch.set(conversationRef, {
+                users: [user.uid, targetUser.uid],
+                lastMessage: 'You matched! Say hello!',
+                updatedAt: serverTimestamp(),
+            });
 
-                toast({
-                    title: "It's a Match!",
-                    description: `You and ${targetUser.name} have liked each other.`,
-                });
-            }
+            toast({
+                title: "It's a Match!",
+                description: `You and ${targetUser.name} have liked each other.`,
+            });
         }
-        
-        await batch.commit();
-
-    } catch (error) {
-        console.error("Error during swipe operation:", error);
-         toast({
-            variant: "destructive",
-            title: "Swipe Error",
-            description: "Could not record your swipe. Please try again.",
-        });
-    } finally {
+    }
+    
+    batch.commit().catch(error => {
+      const permissionError = new FirestorePermissionError({
+        path: 'batch-write', // Batched writes don't have a single path
+        operation: 'write',
+        requestResourceData: { swipe: swipeData }
+      });
+      errorEmitter.emit('permission-error', permissionError);
+    }).finally(() => {
         // Move to the next profile
         setCurrentIndex((prevIndex) => prevIndex + 1);
         setIsSwiping(false);
-    }
+    });
   };
 
   if (isLoadingProfiles) {
