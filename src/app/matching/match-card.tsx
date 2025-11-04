@@ -39,6 +39,9 @@ export default function MatchCard() {
   const matchedUserIds = useMemo(() => {
     if (!matches || !user) return new Set([user?.uid]);
     const ids = new Set(matches.flatMap(m => m.users));
+    if (user?.uid) {
+      ids.add(user.uid);
+    }
     return ids;
   }, [matches, user]);
 
@@ -50,7 +53,7 @@ export default function MatchCard() {
   const { data: profiles, isLoading: isLoadingProfiles, error: profilesError } = useCollection<UserProfile>(potentialMatchesQuery);
 
   const filteredProfiles = useMemo(() => {
-      if (!profiles || matchedUserIds.size === 0) return [];
+      if (!profiles) return [];
       return profiles.filter(p => !matchedUserIds.has(p.uid));
   }, [profiles, matchedUserIds]);
 
