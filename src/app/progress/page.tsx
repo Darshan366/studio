@@ -3,8 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Dumbbell, Activity, Trophy, Clock } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import { Card, CardContent } from '@/components/ui/card';
 
 const weeklyProgress = 75; // percentage
 const records = [
@@ -54,8 +53,8 @@ const ProgressRing = ({ progress }: { progress: number }) => {
           cy="72"
         />
         <motion.circle
-          className="text-primary"
-          stroke="currentColor"
+          className="text-primary from-purple-500 to-pink-500 bg-gradient-to-r"
+          stroke="url(#gradient)"
           strokeWidth="10"
           strokeLinecap="round"
           fill="transparent"
@@ -66,6 +65,12 @@ const ProgressRing = ({ progress }: { progress: number }) => {
           animate={{ strokeDashoffset }}
           transition={{ duration: 1.5, ease: "easeInOut" }}
         />
+        <defs>
+            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#9b5de5" />
+              <stop offset="100%" stopColor="#f15bb5" />
+            </linearGradient>
+        </defs>
       </svg>
       <motion.span
         className="text-3xl font-bold text-foreground"
@@ -124,7 +129,7 @@ export default function ProgressPage() {
               >
                 <Card className="h-full rounded-2xl border-white/10 bg-[#1a1a1a] shadow-lg shadow-black/20 transition-all duration-300 ease-in-out hover:border-primary/50 hover:shadow-primary/20">
                   <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                    <record.icon className="mb-4 h-8 w-8 text-primary" />
+                    <record.icon className="mb-4 h-8 w-8 text-primary bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-pink-500" />
                     <p className="text-xl font-semibold text-foreground">
                       {record.value}
                     </p>
