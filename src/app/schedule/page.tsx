@@ -22,6 +22,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import type { UserProfile } from '@/types/user';
 import { useAutoCheckin } from './use-auto-checkin';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 const initialWorkouts = [
   { day: 'Monday', workout: 'Push Day', progress: 80, exercises: [{ name: 'Bench Press', sets: '4x5' }, { name: 'Overhead Press', sets: '3x8' }] },
