@@ -7,4 +7,13 @@ export interface UserProfile {
   fitnessLevel: 'Beginner' | 'Intermediate' | 'Advanced';
   photoURL?: string;
   bio?: string;
+  gymLocation?: {
+    latitude: number;
+    longitude: number;
+  };
+  attendance?: {
+    [date: string]: boolean;
+  };
+  streakCount?: number;
+  lastCheckInDate?: string;
 }

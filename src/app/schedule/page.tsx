@@ -1,9 +1,9 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Flame, Bot, Dumbbell, Settings, RotateCcw, PlusCircle, Trash2, X, Maximize2 } from 'lucide-react';
+import { Flame, Bot, Dumbbell, Settings, RotateCcw, PlusCircle, Trash2, X, Maximize2, MapPin } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
+import type { UserProfile } from '@/types/user';
+import { useAutoCheckin } from './use-auto-checkin';
 
 const initialWorkouts = [
   { day: 'Monday', workout: 'Push Day', progress: 80, exercises: [{ name: 'Bench Press', sets: '4x5' }, { name: 'Overhead Press', sets: '3x8' }] },
@@ -29,22 +33,47 @@ const initialWorkouts = [
   { day: 'Sunday', workout: 'Rest Day', progress: 0, exercises: [] },
 ];
 
+const quotes = [
+    "Strong today, unstoppable tomorrow 💪",
+    "No excuses. Just progress.",
+    "Legends train daily 🔥",
+    "Sweat is just fat crying.",
+    "The only bad workout is the one that didn't happen."
+];
+
 const cardVariants = {
   hidden: { rotateY: 180, opacity: 0 },
   visible: { rotateY: 0, opacity: 1 },
 };
 
 export default function SchedulePage() {
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  
+  const userDocRef = useMemoFirebase(() => {
+      if (!user) return null;
+      return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+
+  const { data: userProfile } = useDoc<UserProfile>(userDocRef);
+  
+  useAutoCheckin(userProfile, userDocRef);
+
   const [weeklyWorkouts, setWeeklyWorkouts] = useState(initialWorkouts);
   const [flippedIndex, setFlippedIndex] = useState<number | null>(null);
   const [isEditing, setIsEditing] = useState<number | null>(null);
   const [editingData, setEditingData] = useState<any>(null);
   const [expandedCard, setExpandedCard] = useState<number | null>(null);
-  const { toast } = useToast();
+  const [motivationalQuote, setMotivationalQuote] = useState('');
+
+  useEffect(() => {
+    setMotivationalQuote(quotes[Math.floor(Math.random() * quotes.length)]);
+  }, []);
 
   const handleCardClick = (index: number) => {
     if (isEditing !== null) return;
-    setFlippedIndex(flippedIndex === index ? null : index);
+    setExpandedCard(expandedCard === index ? null : index);
   };
   
   const handleEditClick = (e: React.MouseEvent, index: number) => {
@@ -91,17 +120,55 @@ export default function SchedulePage() {
     setEditingData({ ...editingData, exercises: newExercises });
   };
 
+  const handleUpdateGymLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        const { latitude, longitude } = position.coords;
+        if(userDocRef) {
+            await updateDoc(userDocRef, { gymLocation: { latitude, longitude } });
+            toast({ title: "✅ Gym location updated successfully." });
+        }
+      }, () => {
+        toast({ variant: 'destructive', title: "⚠️ Location permission denied." });
+      });
+    } else {
+        toast({ variant: 'destructive', title: "Geolocation is not supported by this browser." });
+    }
+  }
+
+
+  const streakCount = userProfile?.streakCount || 0;
+  const progressValue = Math.min((streakCount / 7) * 100, 100);
+
   return (
     <div className="space-y-8">
       {/* Header Section */}
       <div className="w-full max-w-5xl mx-auto text-center space-y-4">
-        <div className="flex items-center justify-center gap-2 text-xl font-semibold text-foreground">
-          <Flame className="text-orange-500" /> 5-Day Streak
-        </div>
-        <Progress value={70} className="h-2" />
+        <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="flex items-center justify-center gap-2 text-xl font-semibold text-foreground"
+        >
+          <Flame className="text-orange-500" /> {streakCount}-Day Streak
+        </motion.div>
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Progress value={progressValue} className="h-2" />
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>Tracked using your gym location.</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+
         <p className="text-muted-foreground italic text-sm">
-          “Strong today, unstoppable tomorrow 💥”
+          "{motivationalQuote}"
         </p>
+        <Button variant="outline" size="sm" onClick={handleUpdateGymLocation}>
+            <MapPin className="mr-2 h-4 w-4" /> Update Gym Location
+        </Button>
       </div>
 
       {/* Workout Grid */}
@@ -114,78 +181,20 @@ export default function SchedulePage() {
               'relative group',
               index === 6 && 'lg:col-start-2'
             )}
-            style={{ perspective: 1000 }}
+            onClick={() => handleCardClick(index)}
           >
-            <motion.div
-              className="relative w-full h-48 cursor-pointer"
-              whileHover={{ scale: 1.05 }}
-              onClick={() => handleCardClick(index)}
-            >
-              <AnimatePresence initial={false}>
-                {flippedIndex !== index && (
-                  <motion.div
-                    key="front"
-                    className="absolute w-full h-full"
-                    variants={cardVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="hidden"
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Card className="h-full w-full flex flex-col justify-between p-4 bg-card/80 hover:shadow-lg hover:shadow-primary/10 transition-shadow">
-                      <div>
-                        <CardContent className="p-0 flex justify-between items-start">
-                           <h3 className="text-lg font-bold">{item.day}</h3>
-                           <p className="text-sm text-muted-foreground">{item.workout}</p>
-                        </CardContent>
-                      </div>
-                      <div className="space-y-1">
-                          <Progress value={item.progress} className="h-1.5" />
-                          <p className="text-xs text-muted-foreground">{item.progress}% Complete</p>
-                      </div>
-                    </Card>
-                  </motion.div>
-                )}
-                {flippedIndex === index && (
-                   <motion.div
-                    key="back"
-                    className="absolute w-full h-full"
-                    variants={cardVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="hidden"
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Card className="h-full w-full flex flex-col justify-center items-center p-4 bg-card/80 overflow-y-auto">
-                        <div className="absolute top-2 right-2">
-                           <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setExpandedCard(index);
-                                }}
-                            >
-                                <Maximize2 className="h-4 w-4"/>
-                            </Button>
-                        </div>
-                        <Dumbbell className="h-6 w-6 mb-2 text-primary" />
-                        <h4 className="text-lg font-bold mb-2">{item.workout}</h4>
-                        <div className="text-center text-sm text-muted-foreground">
-                            {item.exercises.length > 0 ? (
-                                item.exercises.map((ex, i) => (
-                                    <p key={i}>{ex.name}: {ex.sets}</p>
-                                ))
-                            ) : (
-                                <p>No exercises planned.</p>
-                            )}
-                        </div>
-                    </Card>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
+            <Card className="h-48 w-full cursor-pointer flex flex-col justify-between p-4 bg-card/80 hover:shadow-lg hover:shadow-primary/10 transition-shadow">
+               <div>
+                  <CardContent className="p-0 flex justify-between items-start">
+                     <h3 className="text-lg font-bold">{item.day}</h3>
+                     <p className="text-sm text-muted-foreground">{item.workout}</p>
+                  </CardContent>
+                </div>
+                <div className="space-y-1">
+                    <Progress value={item.progress} className="h-1.5" />
+                    <p className="text-xs text-muted-foreground">{item.progress}% Complete</p>
+                </div>
+            </Card>
              <button
                 onClick={(e) => handleEditClick(e, index)}
                 className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-black/30 text-white/70 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/50 hover:text-white"

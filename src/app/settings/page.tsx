@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -17,9 +17,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { updateProfile } from "firebase/auth"
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from "@/hooks/use-toast"
-import { useEffect } from "react"
-import { Loader2, User, Dumbbell, Heart, Camera, BarChart3, Trophy, Flame } from "lucide-react"
-import { doc } from "firebase/firestore"
+import { Loader2, User, Dumbbell, Heart, Camera, BarChart3, Trophy, Flame, MapPin } from "lucide-react"
+import { doc, updateDoc } from "firebase/firestore"
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -53,7 +52,6 @@ function EditProfileForm() {
 
     useEffect(() => {
         if(user && firestore) {
-            // A more robust way to get profile data would be to fetch it from the 'users' collection
             form.reset({
                 name: user.displayName || '',
                 bio: '', 
@@ -93,6 +91,30 @@ function EditProfileForm() {
             setIsSubmitting(false);
         }
     }
+
+    const handleSetGymLocation = () => {
+        if (!user || !firestore) return;
+        
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const { latitude, longitude } = position.coords;
+                const userDocRef = doc(firestore, 'users', user.uid);
+                await updateDoc(userDocRef, { gymLocation: { latitude, longitude } });
+                toast({ title: "✅ Gym location saved successfully." });
+            }, (error) => {
+                 toast({
+                    variant: 'destructive',
+                    title: "⚠️ Location Error",
+                    description: error.code === error.PERMISSION_DENIED
+                        ? "Location permission denied. Please enable it in your browser settings."
+                        : "Could not get your location."
+                });
+            });
+        } else {
+            toast({ variant: 'destructive', title: "Geolocation is not supported by this browser." });
+        }
+    };
+
 
     return (
       <Card className="border-none bg-transparent shadow-none">
@@ -147,8 +169,15 @@ function EditProfileForm() {
                             </FormItem>
                         )}
                     />
+                     <div className="space-y-2">
+                        <Label className="flex items-center gap-2 text-muted-foreground"><MapPin size={14}/> Gym Location</Label>
+                        <Button type="button" variant="outline" onClick={handleSetGymLocation} className="w-full bg-muted/40 border-border/30 hover:bg-muted/80">
+                           Set Gym Location
+                        </Button>
+                     </div>
+
                     <div>
-                        <Button type="submit" disabled={isSubmitting || isUserLoading} className="bg-primary/90 hover:bg-primary text-primary-foreground font-semibold shadow-md transition-all hover:shadow-primary/40 animate-pulse-slow hover:animate-none">
+                        <Button type="submit" disabled={isSubmitting || isUserLoading} className="w-full bg-primary/90 hover:bg-primary text-primary-foreground font-semibold shadow-md transition-all hover:shadow-primary/40 animate-pulse-slow hover:animate-none">
                             {(isSubmitting || isUserLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                             Save Changes
                         </Button>
@@ -198,9 +227,8 @@ export default function SettingsPage() {
             const storageRef = ref(storage, `avatars/${user.uid}`);
             await uploadBytes(storageRef, file);
             const downloadURL = await getDownloadURL(storageRef);
-            await updateProfile(auth.currentUser, { photoURL: downloadURL });
             
-            // This is important to make sure the UI updates with the new photoURL
+            await updateProfile(auth.currentUser, { photoURL: downloadURL });
             await auth.currentUser.reload();
             
             toast({
@@ -331,5 +359,3 @@ export default function SettingsPage() {
         </div>
     )
 }
-
-    

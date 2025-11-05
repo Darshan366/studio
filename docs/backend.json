@@ -14,8 +14,28 @@
         },
         "photoURL": { "type": "string", "description": "URL of the user's profile picture." },
         "bio": { "type": "string", "description": "A short bio about the user." },
-        "latitude": { "type": "number", "description": "The user's latitude." },
-        "longitude": { "type": "number", "description": "The user's longitude." }
+        "gymLocation": {
+          "type": "object",
+          "description": "The user's saved gym location.",
+          "properties": {
+            "latitude": { "type": "number" },
+            "longitude": { "type": "number" }
+          }
+        },
+        "attendance": {
+          "type": "object",
+          "description": "A map of dates the user attended the gym.",
+          "additionalProperties": { "type": "boolean" }
+        },
+        "streakCount": {
+          "type": "number",
+          "description": "The user's current gym attendance streak."
+        },
+        "lastCheckInDate": {
+          "type": "string",
+          "format": "date",
+          "description": "The last date the user checked in."
+        }
       },
       "required": ["uid", "name", "email", "fitnessLevel"]
     },
