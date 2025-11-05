@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Flame, Bot, Dumbbell, Settings, RotateCcw, PlusCircle, Trash2, X, Maximize2, MapPin } from 'lucide-react';
+import { Flame, Bot, Dumbbell, Settings, RotateCcw, PlusCircle, Trash2, X, MapPin } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -42,11 +42,6 @@ const quotes = [
     "The only bad workout is the one that didn't happen."
 ];
 
-const cardVariants = {
-  hidden: { rotateY: 180, opacity: 0 },
-  visible: { rotateY: 0, opacity: 1 },
-};
-
 export default function SchedulePage() {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -62,7 +57,6 @@ export default function SchedulePage() {
   useAutoCheckin(userProfile, userDocRef);
 
   const [weeklyWorkouts, setWeeklyWorkouts] = useState(initialWorkouts);
-  const [flippedIndex, setFlippedIndex] = useState<number | null>(null);
   const [isEditing, setIsEditing] = useState<number | null>(null);
   const [editingData, setEditingData] = useState<any>(null);
   const [expandedCard, setExpandedCard] = useState<number | null>(null);
