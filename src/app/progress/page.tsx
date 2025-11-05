@@ -1,146 +1,141 @@
 'use client';
 
-import Image from 'next/image';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Award, Dumbbell, PlusCircle } from 'lucide-react';
-import WeeklyProgressChart from '@/components/weekly-progress-chart';
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Dumbbell, Activity, Trophy, Clock } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 
-const recentWorkouts = [
-  {
-    date: 'June 24, 2024',
-    name: 'Full Body Strength',
-    exercises: 5,
-    volume: '5,400 kg',
-  },
-  {
-    date: 'June 22, 2024',
-    name: 'Cardio & Core',
-    exercises: 3,
-    volume: 'N/A',
-  },
-  {
-    date: 'June 20, 2024',
-    name: 'Upper Body Power',
-    exercises: 6,
-    volume: '6,200 kg',
-  },
+const weeklyProgress = 75; // percentage
+const records = [
+  { title: 'Max Bench', value: '90 kg', icon: Dumbbell },
+  { title: 'Longest Run', value: '8 km', icon: Activity },
+  { title: 'Best Streak', value: '14 days', icon: Trophy },
+  { title: 'Total Hours', value: '25 hrs', icon: Clock },
 ];
 
-const personalRecords = [
-  { exercise: 'Squat', weight: '140 kg' },
-  { exercise: 'Bench Press', weight: '100 kg' },
-  { exercise: 'Deadlift', weight: '180 kg' },
-];
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      type: 'spring',
+      stiffness: 100,
+    },
+  },
+};
+
+const ProgressRing = ({ progress }: { progress: number }) => {
+  const radius = 50;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
+
+  return (
+    <div className="relative flex h-36 w-36 items-center justify-center">
+      <svg className="absolute h-full w-full -rotate-90">
+        <circle
+          className="text-muted/20"
+          stroke="currentColor"
+          strokeWidth="10"
+          fill="transparent"
+          r={radius}
+          cx="72"
+          cy="72"
+        />
+        <motion.circle
+          className="text-primary"
+          stroke="currentColor"
+          strokeWidth="10"
+          strokeLinecap="round"
+          fill="transparent"
+          r={radius}
+          cx="72"
+          cy="72"
+          style={{ strokeDasharray: circumference, strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset }}
+          transition={{ duration: 1.5, ease: "easeInOut" }}
+        />
+      </svg>
+      <motion.span
+        className="text-3xl font-bold text-foreground"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1, delay: 0.5 }}
+      >
+        {progress}%
+      </motion.span>
+    </div>
+  );
+};
+
 
 export default function ProgressPage() {
   return (
-    <div className="space-y-6">
-       <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Progress Tracker</h1>
-        <p className="text-muted-foreground">
-          Visualize your journey and review your workout history.
-        </p>
-      </div>
-
-       <Card>
-          <CardHeader>
-            <CardTitle>Weekly Progress</CardTitle>
-            <CardDescription>
-              Total volume lifted over the last 7 days.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pl-2">
-            <WeeklyProgressChart />
-          </CardContent>
-        </Card>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Workout History</CardTitle>
-                <CardDescription>
-                  Review your completed workouts.
-                </CardDescription>
+    <div className="min-h-full w-full bg-gradient-to-br from-[#0e0e0e] to-[#1a1a1a] p-4 sm:p-6 lg:p-8">
+      <motion.div
+        className="mx-auto max-w-5xl space-y-12"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        {/* Weekly Progress Section */}
+        <motion.section variants={itemVariants}>
+          <h2 className="mb-4 text-2xl font-semibold tracking-tight text-foreground">
+            Weekly Progress
+          </h2>
+          <Card className="rounded-2xl border-white/10 bg-[#1a1a1a] shadow-2xl shadow-black/30">
+            <CardContent className="flex flex-col items-center justify-center p-6 text-center sm:flex-row sm:justify-between sm:text-left">
+              <div className="order-2 sm:order-1">
+                <p className="text-4xl font-bold text-foreground">5/7 Days Active</p>
+                <p className="mt-2 text-muted-foreground">
+                  You've crushed it this week! Keep the momentum going.
+                </p>
               </div>
-              <Button size="sm">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Log Workout
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Workout</TableHead>
-                    <TableHead className="text-center">Exercises</TableHead>
-                    <TableHead className="text-right">Volume</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentWorkouts.map((workout) => (
-                    <TableRow key={workout.date}>
-                      <TableCell className="font-medium">{workout.date}</TableCell>
-                      <TableCell>{workout.name}</TableCell>
-                      <TableCell className="text-center">
-                        {workout.exercises}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {workout.volume}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="order-1 mb-6 sm:order-2 sm:mb-0">
+                <ProgressRing progress={weeklyProgress} />
+              </div>
             </CardContent>
           </Card>
-        </div>
+        </motion.section>
 
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Award className="h-5 w-5 text-yellow-500" />
-                Personal Records
-              </CardTitle>
-              <CardDescription>Your current best lifts (1RM).</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {personalRecords.map((pr) => (
-                <div
-                  key={pr.exercise}
-                  className="flex items-center justify-between rounded-md bg-muted/50 p-3"
-                >
-                  <p className="font-semibold">{pr.exercise}</p>
-                  <p className="font-mono text-sm text-foreground">
-                    {pr.weight}
-                  </p>
-                </div>
-              ))}
-              <Button variant="outline" className="w-full">
-                Update PRs
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+        {/* Personal Records Section */}
+        <motion.section variants={itemVariants}>
+          <h2 className="mb-4 text-2xl font-semibold tracking-tight text-foreground">
+            Personal Records
+          </h2>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
+            {records.map((record, index) => (
+              <motion.div
+                key={index}
+                variants={itemVariants}
+                whileHover={{ scale: 1.05 }}
+                transition={{ type: 'spring', stiffness: 300 }}
+              >
+                <Card className="h-full rounded-2xl border-white/10 bg-[#1a1a1a] shadow-lg shadow-black/20 transition-all duration-300 ease-in-out hover:border-primary/50 hover:shadow-primary/20">
+                  <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+                    <record.icon className="mb-4 h-8 w-8 text-primary" />
+                    <p className="text-xl font-semibold text-foreground">
+                      {record.value}
+                    </p>
+                    <p className="text-sm text-muted-foreground">{record.title}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </motion.section>
+      </motion.div>
     </div>
   );
 }
