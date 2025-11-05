@@ -96,7 +96,7 @@ export default function ChatWindow({ conversation }: ChatWindowProps) {
   };
 
   return (
-    <Card className="flex h-full flex-col">
+    <Card className="flex h-full flex-col border-0 md:border">
       <CardHeader className="flex flex-row items-center gap-3 border-b p-4">
         <Avatar>
           <AvatarImage alt={conversation.name} />

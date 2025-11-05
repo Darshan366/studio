@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Flame, Bot, Dumbbell, Settings, RotateCcw, PlusCircle, Trash2, X } from 'lucide-react';
+import { Flame, Bot, Dumbbell, Settings, RotateCcw, PlusCircle, Trash2, X, Maximize2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -47,10 +47,6 @@ export default function SchedulePage() {
     setFlippedIndex(flippedIndex === index ? null : index);
   };
   
-  const handleDoubleClick = (index: number) => {
-    setExpandedCard(index);
-  }
-
   const handleEditClick = (e: React.MouseEvent, index: number) => {
     e.stopPropagation();
     const workoutToEdit = weeklyWorkouts[index];
@@ -119,7 +115,6 @@ export default function SchedulePage() {
               index === 6 && 'lg:col-start-2'
             )}
             style={{ perspective: 1000 }}
-            onDoubleClick={() => handleDoubleClick(index)}
           >
             <motion.div
               className="relative w-full h-48 cursor-pointer"
@@ -162,6 +157,19 @@ export default function SchedulePage() {
                     transition={{ duration: 0.3 }}
                   >
                     <Card className="h-full w-full flex flex-col justify-center items-center p-4 bg-card/80 overflow-y-auto">
+                        <div className="absolute top-2 right-2">
+                           <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExpandedCard(index);
+                                }}
+                            >
+                                <Maximize2 className="h-4 w-4"/>
+                            </Button>
+                        </div>
                         <Dumbbell className="h-6 w-6 mb-2 text-primary" />
                         <h4 className="text-lg font-bold mb-2">{item.workout}</h4>
                         <div className="text-center text-sm text-muted-foreground">
@@ -190,11 +198,11 @@ export default function SchedulePage() {
       
       <AnimatePresence>
         {expandedCard !== null && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md" onClick={() => setExpandedCard(null)}>
             <motion.div
               layoutId={`card-container-${expandedCard}`}
               className="w-[90%] max-w-2xl h-auto bg-card/90 rounded-2xl shadow-2xl"
-              style={{ perspective: 1000 }}
+              onClick={(e) => e.stopPropagation()}
             >
               <Card className="relative h-full w-full flex flex-col justify-start p-8 bg-transparent border-0">
                   <button

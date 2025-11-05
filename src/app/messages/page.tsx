@@ -5,7 +5,9 @@ import ConversationList from './conversation-list';
 import ChatWindow from './chat-window';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface Conversation {
   id: string; // matchId
@@ -71,7 +73,10 @@ export default function MessagesPage() {
       }
       setConversations(convos);
       if (convos.length > 0 && !selectedConversation) {
-        setSelectedConversation(convos[0]);
+        // On desktop, select the first one. On mobile, don't select any.
+        if (window.innerWidth >= 768) {
+            setSelectedConversation(convos[0]);
+        }
       }
       setLoading(false);
     };
@@ -89,17 +94,34 @@ export default function MessagesPage() {
 
   return (
     <div className="flex h-[calc(100vh-6rem)]">
-      <ConversationList
-        conversations={conversations}
-        selectedConversation={selectedConversation}
-        onSelectConversation={setSelectedConversation}
-      />
-      <div className="flex-1">
+      <div
+        className={cn(
+          'w-full md:w-80 md:flex md:flex-shrink-0',
+          selectedConversation ? 'hidden md:block' : 'block'
+        )}
+      >
+        <ConversationList
+          conversations={conversations}
+          selectedConversation={selectedConversation}
+          onSelectConversation={setSelectedConversation}
+        />
+      </div>
+      <div className={cn('flex-1', selectedConversation ? 'block' : 'hidden md:block')}>
         {selectedConversation ? (
-          <ChatWindow conversation={selectedConversation} />
+          <>
+            <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-20 left-4 z-10 md:hidden"
+                onClick={() => setSelectedConversation(null)}
+            >
+                <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <ChatWindow conversation={selectedConversation} />
+          </>
         ) : (
           <div className="flex h-full items-center justify-center text-muted-foreground">
-            <p>No conversations yet. Start matching!</p>
+            <p>Select a conversation to start chatting</p>
           </div>
         )}
       </div>
