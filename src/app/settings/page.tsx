@@ -202,7 +202,6 @@ export default function SettingsPage() {
             
             // This is important to make sure the UI updates with the new photoURL
             await auth.currentUser.reload();
-            // Force a re-render if necessary, though useUser hook should handle it
             
             toast({
                 title: 'Avatar Updated',
@@ -332,3 +331,5 @@ export default function SettingsPage() {
         </div>
     )
 }
+
+    

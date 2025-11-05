@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { useUser, useFirebaseApp } from '@/firebase';
+import { useUser, useFirebaseApp, useAuth } from '@/firebase';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { updateProfile } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +27,7 @@ const statCards = [
 export default function ProfileOverviewCard() {
   const { user } = useUser();
   const app = useFirebaseApp();
+  const auth = useAuth();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -37,7 +38,7 @@ export default function ProfileOverviewCard() {
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !user) return;
+    if (!file || !user || !auth.currentUser) return;
 
     setIsUploading(true);
     const storage = getStorage(app);
@@ -46,9 +47,8 @@ export default function ProfileOverviewCard() {
       await uploadBytes(storageRef, file);
       const photoURL = await getDownloadURL(storageRef);
 
-      if (user) {
-        await updateProfile(user, { photoURL });
-      }
+      await updateProfile(auth.currentUser, { photoURL });
+      await auth.currentUser.reload();
 
 
       toast({
@@ -114,7 +114,5 @@ export default function ProfileOverviewCard() {
     </Card>
   );
 }
-
-    
 
     
