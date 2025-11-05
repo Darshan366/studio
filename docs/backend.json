@@ -14,13 +14,22 @@
         },
         "photoURL": { "type": "string", "description": "URL of the user's profile picture." },
         "bio": { "type": "string", "description": "A short bio about the user." },
-        "gymLocation": {
+        "gymAddress": { "type": "string", "description": "The user's saved gym address." },
+        "gymCoordinates": {
           "type": "object",
-          "description": "The user's saved gym location.",
+          "description": "The user's saved gym location coordinates.",
           "properties": {
             "latitude": { "type": "number" },
             "longitude": { "type": "number" }
           }
+        },
+        "usualGymTime": {
+            "type": "object",
+            "description": "The user's usual workout time window.",
+            "properties": {
+                "start": { "type": "string", "format": "time" },
+                "end": { "type": "string", "format": "time" }
+            }
         },
         "attendance": {
           "type": "object",

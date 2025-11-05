@@ -7,9 +7,14 @@ export interface UserProfile {
   fitnessLevel: 'Beginner' | 'Intermediate' | 'Advanced';
   photoURL?: string;
   bio?: string;
-  gymLocation?: {
+  gymAddress?: string;
+  gymCoordinates?: {
     latitude: number;
     longitude: number;
+  };
+  usualGymTime?: {
+      start: string; // HH:MM
+      end: string; // HH:MM
   };
   attendance?: {
     [date: string]: boolean;

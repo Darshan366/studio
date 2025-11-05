@@ -29,6 +29,27 @@ function getDistance(
   return R * c; // in metres
 }
 
+function isWithinTimeWindow(start: string, end: string): boolean {
+    const now = new Date();
+    const startTime = new Date();
+    const endTime = new Date();
+
+    const [startHours, startMinutes] = start.split(':').map(Number);
+    startTime.setHours(startHours, startMinutes, 0, 0);
+
+    const [endHours, endMinutes] = end.split(':').map(Number);
+    endTime.setHours(endHours, endMinutes, 0, 0);
+    
+    // Handle overnight window
+    if (endTime < startTime) {
+        // e.g., 10 PM to 2 AM
+        return now >= startTime || now <= endTime;
+    }
+    
+    return now >= startTime && now <= endTime;
+}
+
+
 export function useAutoCheckin(
   userProfile: UserProfile | null,
   userDocRef: DocumentReference<DocumentData, DocumentData> | null
@@ -40,24 +61,26 @@ export function useAutoCheckin(
 
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
-    const hour = today.getHours();
 
     // 1. Check if already checked in today
     if (userProfile.lastCheckInDate === todayStr) {
       return;
     }
     
-    // 2. Check if gym location is set
-    if (!userProfile.gymLocation?.latitude || !userProfile.gymLocation?.longitude) {
-      // Don't toast here, UI should prompt user to set location
+    // 2. Check if gym location and time are set
+    if (!userProfile.gymCoordinates?.latitude || !userProfile.gymCoordinates?.longitude) {
       console.log('Gym location not set.');
       return;
     }
-    
-    // 3. Check if it's within check-in hours (5 AM to 11 PM)
-    if (hour < 5 || hour >= 23) {
-      console.log('Outside of check-in hours.');
+    if (!userProfile.usualGymTime?.start || !userProfile.usualGymTime?.end) {
+      console.log('Usual gym time not set.');
       return;
+    }
+
+    // 3. Check if it's within the user's usual gym time window
+    if (!isWithinTimeWindow(userProfile.usualGymTime.start, userProfile.usualGymTime.end)) {
+        console.log('Outside of usual gym time window.');
+        return;
     }
     
     const checkLocation = () => {
@@ -67,8 +90,8 @@ export function useAutoCheckin(
           const distance = getDistance(
             latitude,
             longitude,
-            userProfile.gymLocation!.latitude,
-            userProfile.gymLocation!.longitude
+            userProfile.gymCoordinates!.latitude,
+            userProfile.gymCoordinates!.longitude
           );
 
           if (distance <= CHECKIN_DISTANCE_METERS) {
@@ -90,7 +113,7 @@ export function useAutoCheckin(
             });
 
             toast({
-              title: `🔥 Checked in automatically! Keep it up!`,
+              title: `🔥 Great work! Streak +1!`,
               description: `You're on a ${newStreakCount}-day streak!`
             });
           } else {
