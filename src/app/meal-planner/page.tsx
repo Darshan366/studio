@@ -6,7 +6,7 @@ import {
   CardContent,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Utensils, Bot, RotateCcw, Maximize2 } from 'lucide-react';
+import { PlusCircle, Utensils, RotateCcw, Maximize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 type MealPlan = {
@@ -153,15 +153,6 @@ export default function MealPlanner() {
                 Reset Meal Plan
             </Button>
         </div>
-
-
-      {/* Floating AI Button */}
-      <button
-        className="fixed bottom-8 right-8 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full p-4 shadow-lg transition-all hover:scale-105"
-        onClick={() => alert('AI Assistant coming soon!')}
-      >
-        <Bot className="w-6 h-6" />
-      </button>
     </div>
   );
 }

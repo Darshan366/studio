@@ -7,7 +7,6 @@ import {
   Utensils,
   Calendar,
   BarChart3,
-  Bot,
   Settings,
   Users,
   MessageSquare,
@@ -25,7 +24,6 @@ const navItems = [
   { href: '/progress', label: 'Progress', icon: BarChart3 },
   { href: '/matching', label: 'Matching', icon: Users },
   { href: '/messages', label: 'Messages', icon: MessageSquare },
-  { href: '/ai-suggestions', label: 'AI Suggestions', icon: Bot },
 ];
 
 const settingsNav = {

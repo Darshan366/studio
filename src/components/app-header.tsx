@@ -4,7 +4,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Utensils,
-  Bot,
   Calendar,
   LayoutDashboard,
   LogOut,
@@ -36,7 +35,6 @@ const navItems = [
   { href: '/progress', label: 'Progress', icon: BarChart3 },
   { href: '/matching', label: 'Matching', icon: Users },
   { href: '/messages', label: 'Messages', icon: MessageSquare },
-  { href: '/ai-suggestions', label: 'AI Suggestions', icon: Bot },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
