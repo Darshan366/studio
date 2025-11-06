@@ -37,23 +37,26 @@ export default function MatchCard() {
   const { data: matches } = useCollection(matchesQuery);
 
   const matchedUserIds = useMemo(() => {
-    if (!matches || !user) return new Set([user?.uid]);
-    const ids = new Set(matches.flatMap(m => m.users));
-    if (user?.uid) {
-      ids.add(user.uid);
+    const ids = new Set([user?.uid]); // Start with current user's ID
+    if (matches) {
+      matches.forEach(match => {
+        match.users.forEach((id: string) => ids.add(id));
+      });
     }
     return ids;
   }, [matches, user]);
 
   const potentialMatchesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'users'));
-  }, [firestore]);
+    if (!firestore || !user) return null;
+    // Query for users that are not the current user
+    return query(collection(firestore, 'users'), where('uid', '!=', user.uid));
+  }, [firestore, user]);
 
   const { data: profiles, isLoading: isLoadingProfiles, error: profilesError } = useCollection<UserProfile>(potentialMatchesQuery);
 
   const filteredProfiles = useMemo(() => {
       if (!profiles) return [];
+      // Further filter out users who are already matched
       return profiles.filter(p => !matchedUserIds.has(p.uid));
   }, [profiles, matchedUserIds]);
 
