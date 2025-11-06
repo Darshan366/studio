@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -112,18 +113,26 @@ export default function LoginPage() {
       }
       // AuthLayout will handle the redirect
     } catch (error) {
-       let description = 'Could not sign in with Google. Please try again.';
        if (error instanceof FirebaseError) {
-          if (error.code === 'auth/account-exists-with-different-credential') {
-            description = 'An account already exists with the same email address but different sign-in credentials. Please sign in using the original method.';
+          if (error.code === 'auth/cancelled-popup-request') {
+            // User cancelled the popup, so we do nothing.
+            return;
           }
-       }
-        console.error('Google sign-in error:', error);
-        toast({
+          if (error.code === 'auth/account-exists-with-different-credential') {
+            toast({
+                variant: 'destructive',
+                title: 'Google Sign-In Failed',
+                description: 'An account already exists with this email. Please sign in using the original method.',
+            });
+          }
+       } else {
+         console.error('Google sign-in error:', error);
+         toast({
             variant: 'destructive',
             title: 'Google Sign-In Failed',
-            description,
+            description: 'Could not sign in with Google. Please try again.',
         });
+       }
     } finally {
         setIsGoogleLoading(false);
     }
