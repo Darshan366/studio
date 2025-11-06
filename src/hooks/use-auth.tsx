@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUser } from '@/firebase';
 import { Loader2 } from 'lucide-react';
@@ -35,8 +35,7 @@ export const AuthLayout = ({ children }: { children: ReactNode }) => {
     }
   }, [user, isUserLoading, isAuthPage, isMarketingPage, router, pathname]);
 
-  // Loading state
-  if (isUserLoading || (user && isMarketingPage)) {
+  if (isUserLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -46,8 +45,17 @@ export const AuthLayout = ({ children }: { children: ReactNode }) => {
 
   // Render auth pages or landing page without the main app layout
   if (!user || isAuthPage || isMarketingPage) {
+    // If we're on a protected route but the user is null (e.g., during logout), show a loader.
+    if (!isAuthPage && !isMarketingPage) {
+       return (
+          <div className="flex min-h-screen items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        );
+    }
     return <>{children}</>;
   }
+
 
   // Render the main app layout for authenticated users
   return (
