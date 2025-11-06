@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -80,6 +81,27 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-gym-dark text-foreground;
   }
 }
+
+@layer components {
+  .gradient-btn {
+    @apply bg-gradient-to-r from-gym-green to-green-400;
+  }
+  
+  .glassmorphism {
+    @apply bg-white/5 backdrop-blur-lg;
+  }
+  
+  .feature-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .feature-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(16, 221, 115, 0.1);
+  }
+}
+
+    

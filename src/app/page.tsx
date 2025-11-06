@@ -2,165 +2,224 @@
 'use client';
 
 import { Button } from "@/components/ui/button";
-import { Users, Heart, Dumbbell, BarChart3, Calendar, Utensils } from "lucide-react";
-import { motion } from "framer-motion";
+import { Users, Heart, Star, Dumbbell } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
 export default function LandingPage() {
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.2,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 100,
-      },
-    },
-  };
-
   return (
-    <div className="relative min-h-screen flex flex-col bg-background text-foreground">
-       <div
-        aria-hidden="true"
-        className="absolute inset-0 -z-10 h-full w-full bg-background"
-      >
-        <div className="absolute bottom-0 left-0 right-0 top-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px]"></div>
-      </div>
-      {/* Header */}
-       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-14 max-w-screen-2xl items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
-             <Dumbbell className="h-6 w-6 text-primary" />
-             <span className="font-bold">GymFlow</span>
-          </Link>
-          <nav className="flex items-center gap-4">
-             <Button variant="ghost" asChild>
-                <Link href="/login">Login</Link>
-             </Button>
-             <Button asChild>
-                <Link href="/signup">Get Started</Link>
-             </Button>
-          </nav>
-        </div>
-      </header>
-
-      <main className="flex-1">
-        {/* Hero Section */}
-        <section className="relative py-20 md:py-32">
-          <div className="container px-4 text-center">
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.5, ease: "easeInOut" }}
+    <div className="min-h-screen bg-gym-dark text-gym-light-gray">
+      {/* Hero Section */}
+      <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        {/* Background Image with Overlay */}
+        <Image 
+          src="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=1920&h=1080"
+          alt="Gym background"
+          layout="fill"
+          objectFit="cover"
+          className="absolute inset-0 z-0"
+          data-ai-hint="fitness gym"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-gym-dark/90 to-gym-dark/60" />
+        
+        <div className="relative z-10 text-center max-w-4xl mx-auto px-4">
+          <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight text-white">
+            Find Your Perfect
+            <span className="text-gym-green block">Gym Partner</span>
+          </h1>
+          <p className="text-xl md:text-2xl text-gym-muted mb-8 max-w-2xl mx-auto">
+            Connect with like-minded fitness enthusiasts, share workout goals, and achieve more together.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Button
+              asChild
+              className="gradient-btn px-8 py-6 rounded-xl text-white font-semibold text-lg shadow-gym-glow hover:scale-105 transition-transform duration-300"
             >
-              <Badge variant="outline" className="mb-6 border-primary/50 bg-primary/10 text-primary">
-                Find Your Perfect Gym Partner
-              </Badge>
-              <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-6">
-                Connect, Train, &amp; Transform
-              </h1>
-              <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-                GymFlow helps you find workout partners who match your goals, schedule, and fitness level. Stop training alone, start achieving more together.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                 <Button size="lg" asChild>
-                    <Link href="/signup">Sign Up for Free</Link>
-                 </Button>
-                 <Button size="lg" variant="outline" asChild>
-                    <Link href="/login">Login</Link>
-                 </Button>
-              </div>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* Features Section */}
-        <section className="py-20 md:py-32 bg-muted/20">
-          <div className="container px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tighter">
-                Everything You Need in One App
-              </h2>
-              <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
-                From finding the right partner to tracking every part of your fitness journey.
-              </p>
-            </div>
-            <motion.div
-              className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
-              variants={containerVariants}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.2 }}
+              <Link href="/signup">Sign Up Free</Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="px-8 py-6 rounded-xl border-2 border-gym-green text-gym-green font-semibold text-lg hover:bg-gym-green hover:text-white transition-all duration-300 hover:scale-105"
             >
-              {[
-                { icon: Users, title: 'Smart Matching', desc: 'Our AI finds partners who match your goals, location, and schedule.' },
-                { icon: Heart, title: 'Real-time Chat', desc: 'Connect instantly with matches to plan workouts and motivate each other.' },
-                { icon: BarChart3, title: 'Progress Tracking', desc: 'Monitor your personal records, workout consistency, and gains over time.' },
-                { icon: Calendar, title: 'Workout Scheduling', desc: 'Plan your weekly workouts and track your gym attendance automatically.' },
-                { icon: Utensils, title: 'Meal Planner', desc: 'Organize your nutrition to perfectly complement your training regimen.' },
-                { icon: Dumbbell, title: 'AI Suggestions', desc: 'Get AI-powered suggestions for alternative exercises based on your equipment.' },
-              ].map((feature, i) => (
-                <motion.div key={i} variants={itemVariants}>
-                  <Card className="h-full bg-card/50 hover:bg-card/90 transition-colors border-border/50 hover:border-primary/30">
-                    <CardHeader>
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 bg-primary/10 rounded-lg">
-                           <feature.icon className="h-6 w-6 text-primary" />
-                        </div>
-                        <CardTitle>{feature.title}</CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-muted-foreground">{feature.desc}</p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </motion.div>
-          </div>
-        </section>
-
-        {/* CTA Section */}
-        <section className="py-20 md:py-32">
-          <div className="container px-4 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tighter mb-4">
-              Ready to Find Your Flow?
-            </h2>
-            <p className="text-muted-foreground max-w-xl mx-auto mb-8">
-              Join thousands of others who are already making connections and crushing their fitness goals. It's free to get started.
-            </p>
-            <Button size="lg" asChild>
-              <Link href="/signup">Start Your Journey Today</Link>
+              <Link href="/login">Login</Link>
             </Button>
           </div>
-        </section>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t">
-        <div className="container flex flex-col md:flex-row items-center justify-between py-6 gap-4">
-          <div className="flex items-center gap-2">
-            <Dumbbell className="h-5 w-5" />
-            <p className="text-sm font-semibold">GymFlow</p>
+          
+          <div className="flex items-center justify-center space-x-8 mt-12 text-sm text-gym-muted">
+            <div className="flex items-center space-x-2">
+              <Users className="text-gym-green" />
+              <span>10K+ Active Users</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Heart className="text-gym-green" />
+              <span>50K+ Connections</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Star className="text-gym-green" />
+              <span>4.9 Rating</span>
+            </div>
           </div>
-          <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} GymFlow. All rights reserved.
+        </div>
+      </div>
+      
+      {/* Features Section */}
+      <div className="py-32 px-4 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-gym-green/5 via-transparent to-gym-green/10"></div>
+        
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="text-center mb-20">
+            <span className="inline-block px-4 py-2 bg-gym-green/20 text-gym-green rounded-full text-sm font-medium mb-6">
+              WHY CHOOSE GYMFLOW
+            </span>
+            <h2 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-white to-gym-muted bg-clip-text text-transparent">
+              Everything You Need to
+              <span className="block text-gym-green">Find Your Perfect Match</span>
+            </h2>
+            <p className="text-xl text-gym-muted max-w-3xl mx-auto leading-relaxed">
+              Join thousands of fitness enthusiasts who've found their ideal workout partners through our innovative platform
+            </p>
+          </div>
+          
+          <div className="grid lg:grid-cols-3 gap-8 lg:gap-12">
+            <div className="group relative">
+              <div className="glassmorphism rounded-3xl p-10 text-center h-full border border-white/10 hover:border-gym-green/30 feature-card">
+                <div className="relative mb-8">
+                  <div className="w-20 h-20 bg-gradient-to-br from-gym-green to-gym-green/80 rounded-2xl flex items-center justify-center mx-auto shadow-gym-glow">
+                    <Users className="text-3xl text-white" />
+                  </div>
+                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-gym-green rounded-full animate-pulse"></div>
+                </div>
+                <h3 className="text-2xl font-bold mb-4 text-white">Smart Matching</h3>
+                <p className="text-gym-muted leading-relaxed text-lg">
+                  Our AI-powered algorithm analyzes your fitness goals, experience level, location, and schedule to find your perfect workout companion.
+                </p>
+              </div>
+            </div>
+
+            <div className="group relative">
+              <div className="glassmorphism rounded-3xl p-10 text-center h-full border border-white/10 hover:border-gym-green/30 feature-card">
+                <div className="relative mb-8">
+                  <div className="w-20 h-20 bg-gradient-to-br from-gym-green to-gym-green/80 rounded-2xl flex items-center justify-center mx-auto shadow-gym-glow">
+                    <Heart className="text-3xl text-white" />
+                  </div>
+                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-gym-green rounded-full animate-pulse"></div>
+                </div>
+                <h3 className="text-2xl font-bold mb-4 text-white">Real-time Chat</h3>
+                <p className="text-gym-muted leading-relaxed text-lg">
+                  Connect instantly with your matches through our built-in messaging system. Plan workouts, share progress, and motivate each other.
+                </p>
+              </div>
+            </div>
+
+            <div className="group relative">
+              <div className="glassmorphism rounded-3xl p-10 text-center h-full border border-white/10 hover:border-gym-green/30 feature-card">
+                <div className="relative mb-8">
+                  <div className="w-20 h-20 bg-gradient-to-br from-gym-green to-gym-green/80 rounded-2xl flex items-center justify-center mx-auto shadow-gym-glow">
+                    <Star className="text-3xl text-white" />
+                  </div>
+                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-gym-green rounded-full animate-pulse"></div>
+                </div>
+                <h3 className="text-2xl font-bold mb-4 text-white">Nutrition Guidance</h3>
+                <p className="text-gym-muted leading-relaxed text-lg">
+                  Access personalized meal plans, nutrition tips, and diet recommendations tailored to your fitness goals and dietary preferences.
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-24 text-center">
+            <div className="grid md:grid-cols-4 gap-8">
+              <div className="glassmorphism rounded-2xl p-6 border border-white/5">
+                <div className="text-3xl font-bold text-gym-green mb-2">10K+</div>
+                <div className="text-gym-muted">Active Members</div>
+              </div>
+              <div className="glassmorphism rounded-2xl p-6 border border-white/5">
+                <div className="text-3xl font-bold text-gym-green mb-2">50K+</div>
+                <div className="text-gym-muted">Successful Matches</div>
+              </div>
+              <div className="glassmorphism rounded-2xl p-6 border border-white/5">
+                <div className="text-3xl font-bold text-gym-green mb-2">4.9★</div>
+                <div className="text-gym-muted">User Rating</div>
+              </div>
+              <div className="glassmorphism rounded-2xl p-6 border border-white/5">
+                <div className="text-3xl font-bold text-gym-green mb-2">24/7</div>
+                <div className="text-gym-muted">Support</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Call to Action Section */}
+      <div className="py-24 px-4 relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-gym-green/10 via-gym-green/5 to-gym-green/10"></div>
+        <div className="max-w-4xl mx-auto text-center relative z-10">
+          <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
+            Ready to Transform Your
+            <span className="block text-gym-green">Fitness Journey?</span>
+          </h2>
+          <p className="text-xl text-gym-muted mb-8 max-w-2xl mx-auto">
+            Join thousands of fitness enthusiasts who've already found their perfect workout partners. Start your journey today - it's completely free!
           </p>
-          <div className="flex gap-4">
-            <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">Privacy Policy</Link>
-            <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">Terms of Service</Link>
+          <Button
+            asChild
+            className="gradient-btn px-10 py-6 rounded-xl text-white font-semibold text-lg shadow-gym-glow hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+          >
+            <Link href="/signup">Start Finding Partners</Link>
+          </Button>
+        </div>
+      </div>
+      
+      {/* Footer */}
+      <footer className="border-t border-white/10 py-12 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <div className="flex items-center space-x-2 mb-4">
+                <Dumbbell className="text-gym-green text-2xl" />
+                <h3 className="text-xl font-bold text-gym-green">GymFlow</h3>
+              </div>
+              <p className="text-gym-muted text-sm">
+                The ultimate platform for finding your perfect workout partner and achieving your fitness goals together.
+              </p>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold mb-4 text-white">Platform</h4>
+              <div className="space-y-2 text-sm text-gym-muted">
+                <div>Find Partners</div>
+                <div>Diet Plans</div>
+                <div>Sponsor Offers</div>
+                <div>Real-time Chat</div>
+              </div>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold mb-4 text-white">Support</h4>
+              <div className="space-y-2 text-sm text-gym-muted">
+                <div>Help Center</div>
+                <div>Safety Guidelines</div>
+                <div>Community Rules</div>
+                <div>Contact Us</div>
+              </div>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold mb-4 text-white">Company</h4>
+              <div className="space-y-2 text-sm text-gym-muted">
+                <div>About Us</div>
+                <div>Privacy Policy</div>
+                <div>Terms of Service</div>
+                <div>Careers</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between">
+            <div className="text-sm text-gym-muted mb-4 md:mb-0">
+              © 2024 GymFlow. All rights reserved.
+            </div>
           </div>
         </div>
       </footer>
@@ -168,82 +227,4 @@ export default function LandingPage() {
   );
 }
 
-// Add Badge and Card components if they are not globally available.
-import { cva } from "class-variance-authority";
-import { cn } from "@/lib/utils";
-import React from "react";
-
-const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-  {
-    variants: {
-      variant: {
-        default: "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
-        secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        destructive: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
-        outline: "text-foreground",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  }
-);
-
-function Badge({ className, variant, ...props }: React.HTMLAttributes<HTMLDivElement> & { variant?: any }) {
-  return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
-  );
-}
-
-
-const Card = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "rounded-lg border bg-card text-card-foreground shadow-sm",
-      className
-    )}
-    {...props}
-  />
-))
-Card.displayName = "Card"
-
-const CardHeader = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("flex flex-col space-y-1.5 p-6", className)}
-    {...props}
-  />
-))
-CardHeader.displayName = "CardHeader"
-
-const CardTitle = React.forwardRef<
-  HTMLParagraphElement,
-  React.HTMLAttributes<HTMLHeadingElement>
->(({ className, ...props }, ref) => (
-  <h3
-    ref={ref}
-    className={cn(
-      "text-2xl font-semibold leading-none tracking-tight",
-      className
-    )}
-    {...props}
-  />
-))
-CardTitle.displayName = "CardTitle"
-
-
-const CardContent = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
-))
-CardContent.displayName = "CardContent"
+    

@@ -1,3 +1,4 @@
+
 import type {Config} from 'tailwindcss';
 
 export default {
@@ -65,11 +66,18 @@ export default {
           border: 'hsl(var(--sidebar-border))',
           ring: 'hsl(var(--sidebar-ring))',
         },
+        'gym-dark': '#0D0D0D',
+        'gym-green': '#10DD73',
+        'gym-light-gray': '#F0F2F5',
+        'gym-muted': '#8E8E93',
       },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+      },
+      boxShadow: {
+        'gym-glow': '0 0 20px 0px rgba(16, 221, 115, 0.5)',
       },
       keyframes: {
         'accordion-down': {
@@ -103,3 +111,5 @@ export default {
   },
   plugins: [require('tailwindcss-animate')],
 } satisfies Config;
+
+    
