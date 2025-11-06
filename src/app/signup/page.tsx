@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider, getAdditionalUserInfo } from 'firebase/auth';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { useAuth, useFirestore } from '@/firebase';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -38,6 +38,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
 import { Textarea } from '@/components/ui/textarea';
+import { GoogleIcon } from '@/components/icons/google';
 
 
 const formSchema = z.object({
@@ -58,6 +59,7 @@ export default function SignupPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -114,6 +116,50 @@ export default function SignupPage() {
         });
     } finally {
         setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      const additionalInfo = getAdditionalUserInfo(result);
+
+      if (additionalInfo?.isNewUser) {
+        // Create a new document in Firestore for new users
+        const userDocRef = doc(firestore, 'users', user.uid);
+        setDocumentNonBlocking(userDocRef, {
+          uid: user.uid,
+          name: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL,
+          fitnessLevel: 'Beginner', // Default value
+          bio: '', // Default value
+          createdAt: serverTimestamp(),
+        }, { merge: true });
+        toast({
+          title: 'Account Created!',
+          description: "Welcome to GymFlow! We're glad to have you.",
+        });
+      }
+      // AuthLayout will handle the redirect
+    } catch (error) {
+       let description = 'Could not sign in with Google. Please try again.';
+       if (error instanceof FirebaseError) {
+          if (error.code === 'auth/account-exists-with-different-credential') {
+            description = 'An account already exists with the same email address but different sign-in credentials. Please sign in using the original method.';
+          }
+       }
+        console.error('Google sign-in error:', error);
+        toast({
+            variant: 'destructive',
+            title: 'Google Sign-In Failed',
+            description,
+        });
+    } finally {
+        setIsGoogleLoading(false);
     }
   };
 
@@ -210,12 +256,35 @@ export default function SignupPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create an account
               </Button>
             </form>
           </Form>
+           <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                Or continue with
+                </span>
+            </div>
+          </div>
+           <Button
+            variant="outline"
+            className="w-full"
+            onClick={handleGoogleSignIn}
+            disabled={isLoading || isGoogleLoading}
+            >
+            {isGoogleLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+                <GoogleIcon className="mr-2 h-4 w-4" />
+            )}
+            Google
+            </Button>
           <div className="mt-4 text-center text-sm">
             Already have an account?{' '}
             <Link href="/login" className="underline">
