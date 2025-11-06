@@ -1,18 +1,37 @@
-
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Dumbbell, Activity, Trophy, Clock } from 'lucide-react';
+import { Dumbbell, Activity, Trophy, Clock, Edit } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+
+const initialRecords = [
+  { title: 'Max Bench', value: '90 kg', icon: 'Dumbbell' },
+  { title: 'Longest Run', value: '8 km', icon: 'Activity' },
+  { title: 'Best Streak', value: '14 days', icon: 'Trophy' },
+  { title: 'Total Hours', value: '25 hrs', icon: 'Clock' },
+];
+
+const icons: { [key: string]: React.ElementType } = {
+    Dumbbell,
+    Activity,
+    Trophy,
+    Clock,
+};
 
 const weeklyProgress = 75; // percentage
-const records = [
-  { title: 'Max Bench', value: '90 kg', icon: Dumbbell },
-  { title: 'Longest Run', value: '8 km', icon: Activity },
-  { title: 'Best Streak', value: '14 days', icon: Trophy },
-  { title: 'Total Hours', value: '25 hrs', icon: Clock },
-];
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -64,13 +83,13 @@ const ProgressRing = ({ progress }: { progress: number }) => {
           cy="72"
           style={{ strokeDasharray: circumference, strokeDashoffset: circumference }}
           animate={{ strokeDashoffset }}
-          transition={{ duration: 1.5, ease: "easeInOut" }}
+          transition={{ duration: 1.5, ease: 'easeInOut' }}
         />
         <defs>
-            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#9b5de5" />
-              <stop offset="100%" stopColor="#f15bb5" />
-            </linearGradient>
+          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#9b5de5" />
+            <stop offset="100%" stopColor="#f15bb5" />
+          </linearGradient>
         </defs>
       </svg>
       <motion.span
@@ -85,8 +104,32 @@ const ProgressRing = ({ progress }: { progress: number }) => {
   );
 };
 
-
 export default function ProgressPage() {
+  const [records, setRecords] = useState(initialRecords);
+  const [isEditing, setIsEditing] = useState<number | null>(null);
+  const [editingData, setEditingData] = useState({ title: '', value: '' });
+  const { toast } = useToast();
+
+  const handleEditClick = (index: number) => {
+    setIsEditing(index);
+    setEditingData({
+      title: records[index].title,
+      value: records[index].value,
+    });
+  };
+
+  const handleSave = () => {
+    if (isEditing === null) return;
+    const updatedRecords = [...records];
+    updatedRecords[isEditing] = { ...updatedRecords[isEditing], ...editingData };
+    setRecords(updatedRecords);
+    setIsEditing(null);
+    toast({
+      title: 'Record Updated',
+      description: `Your record for "${editingData.title}" has been saved.`,
+    });
+  };
+
   return (
     <div className="min-h-full w-full bg-gradient-to-br from-[#0e0e0e] to-[#1a1a1a] p-4 sm:p-6 lg:p-8">
       <motion.div
@@ -121,27 +164,71 @@ export default function ProgressPage() {
             Personal Records
           </h2>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
-            {records.map((record, index) => (
-              <motion.div
-                key={index}
-                variants={itemVariants}
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: 'spring', stiffness: 300 }}
-              >
-                <Card className="h-full rounded-2xl border-white/10 bg-[#1a1a1a] shadow-lg shadow-black/20 transition-all duration-300 ease-in-out hover:border-primary/50 hover:shadow-primary/20">
-                  <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                    <record.icon className="mb-4 h-8 w-8 text-primary bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-pink-500" />
-                    <p className="text-xl font-semibold text-foreground">
-                      {record.value}
-                    </p>
-                    <p className="text-sm text-muted-foreground">{record.title}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+            {records.map((record, index) => {
+              const Icon = icons[record.icon];
+              return (
+                <motion.div
+                  key={index}
+                  variants={itemVariants}
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ type: 'spring', stiffness: 300 }}
+                  className="group relative"
+                >
+                  <Card className="h-full rounded-2xl border-white/10 bg-[#1a1a1a] shadow-lg shadow-black/20 transition-all duration-300 ease-in-out hover:border-primary/50 hover:shadow-primary/20">
+                    <CardContent className="flex h-full flex-col items-center justify-center p-6 text-center">
+                      {Icon && <Icon className="mb-4 h-8 w-8 text-primary bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-pink-500" />}
+                      <p className="text-xl font-semibold text-foreground">
+                        {record.value}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{record.title}</p>
+                    </CardContent>
+                  </Card>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleEditClick(index)}
+                    className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/30 text-white/70 opacity-0 transition-opacity group-hover:opacity-100"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </motion.div>
+              );
+            })}
           </div>
         </motion.section>
       </motion.div>
+
+       {/* Edit Dialog */}
+       <Dialog open={isEditing !== null} onOpenChange={(open) => !open && setIsEditing(null)}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Edit Personal Record</DialogTitle>
+                <DialogDescription>Update the title and value for your personal record.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                    <Label htmlFor="record-title">Title</Label>
+                    <Input 
+                        id="record-title" 
+                        value={editingData.title}
+                        onChange={(e) => setEditingData({...editingData, title: e.target.value})}
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="record-value">Value</Label>
+                    <Input 
+                        id="record-value" 
+                        value={editingData.value}
+                        onChange={(e) => setEditingData({...editingData, value: e.target.value})}
+                    />
+                </div>
+            </div>
+            <DialogFooter>
+                <Button variant="secondary" onClick={() => setIsEditing(null)}>Cancel</Button>
+                <Button onClick={handleSave}>Save Changes</Button>
+            </DialogFooter>
+        </DialogContent>
+       </Dialog>
     </div>
   );
 }
