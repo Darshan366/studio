@@ -29,7 +29,7 @@ import { signOut } from 'firebase/auth';
 import NotificationBell from '@/components/notification-bell';
 
 const navItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/meal-planner', label: 'Meal Planner', icon: Utensils },
   { href: '/schedule', label: 'Schedule', icon: Calendar },
   { href: '/progress', label: 'Progress', icon: BarChart3 },

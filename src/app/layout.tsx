@@ -1,14 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import {
-  SidebarProvider,
-  Sidebar,
-  SidebarInset,
-  SidebarRail,
-} from '@/components/ui/sidebar';
-import AppSidebar from '@/components/app-sidebar';
-import AppHeader from '@/components/app-header';
 import { FirebaseClientProvider } from '@/firebase';
 import { AuthLayout } from '@/hooks/use-auth';
 
@@ -35,16 +27,7 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <FirebaseClientProvider>
             <AuthLayout>
-              <SidebarProvider defaultOpen>
-                <Sidebar collapsible="icon" variant="sidebar" side="left">
-                  <AppSidebar />
-                  <SidebarRail />
-                </Sidebar>
-                <SidebarInset>
-                  <AppHeader />
-                  <main className="flex-1 p-4 lg:p-6">{children}</main>
-                </SidebarInset>
-              </SidebarProvider>
+              {children}
             </AuthLayout>
         </FirebaseClientProvider>
         <Toaster />

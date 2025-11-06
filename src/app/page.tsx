@@ -1,143 +1,250 @@
-// src/app/page.tsx
+
 'use client';
-import {
-  Activity,
-  Calendar,
-  Flame,
-  TrendingUp,
-  Dumbbell,
-} from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import WeeklyProgressChart from '@/components/weekly-progress-chart';
-import { useUser } from '@/firebase';
 
-const quickStats = [
-  {
-    value: '12',
-    label: 'Workouts this month',
-    icon: Activity,
-  },
-  {
-    value: '2,450',
-    label: 'Calories burned',
-    icon: Flame,
-  },
-  {
-    value: '8 days',
-    label: 'Active streak',
-    icon: Calendar,
-  },
-  {
-    value: '+5kg',
-    label: 'Bench Press PR',
-    icon: TrendingUp,
-  },
-];
+import { Button } from "@/components/ui/button";
+import { Users, Heart, Dumbbell, BarChart3, Calendar, Utensils } from "lucide-react";
+import { motion } from "framer-motion";
+import Link from "next/link";
+import Image from "next/image";
 
-const todaysWorkout = {
-  name: 'Full Body Strength',
-  exercises: [
-    { name: 'Barbell Squats', sets: '3x5', done: true },
-    { name: 'Bench Press', sets: '3x5', done: true },
-    { name: 'Deadlifts', sets: '1x5', done: false },
-    { name: 'Overhead Press', sets: '3x8', done: false },
-  ],
-};
+export default function LandingPage() {
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2,
+      },
+    },
+  };
 
-export default function DashboardPage() {
-  const { user } = useUser();
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+      },
+    },
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">Welcome back, {user?.displayName || 'Alex'}!</h1>
-        <p className="text-muted-foreground">
-          Here&apos;s a look at your progress and what&apos;s scheduled for today.
-        </p>
-      </div>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {quickStats.map((stat) => (
-          <Card key={stat.label}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{stat.label}</CardTitle>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Weekly Progress</CardTitle>
-            <CardDescription>
-              Total volume lifted over the last 7 days.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pl-2">
-            <WeeklyProgressChart />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Today&apos;s Workout</CardTitle>
-            <CardDescription>{todaysWorkout.name}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <ul className="space-y-3">
-              {todaysWorkout.exercises.map((ex) => (
-                <li key={ex.name} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                        ex.done
-                          ? 'bg-primary/10 text-primary'
-                          : 'bg-muted text-muted-foreground'
-                      }`}
-                    >
-                      <Dumbbell className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="font-medium">{ex.name}</p>
-                      <p className="text-sm text-muted-foreground">{ex.sets}</p>
-                    </div>
-                  </div>
-                  {ex.done && (
-                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-white">
-                      <svg
-                        className="h-3 w-3"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="3"
-                          d="M5 13l4 4L19 7"
-                        ></path>
-                      </svg>
-                    </div>
-                  )}
-                </li>
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
+      {/* Header */}
+       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-14 max-w-screen-2xl items-center justify-between">
+          <Link href="/" className="flex items-center space-x-2">
+             <Dumbbell className="h-6 w-6 text-primary" />
+             <span className="font-bold">GymFlow</span>
+          </Link>
+          <nav className="flex items-center gap-4">
+             <Button variant="ghost" asChild>
+                <Link href="/login">Login</Link>
+             </Button>
+             <Button asChild>
+                <Link href="/signup">Get Started</Link>
+             </Button>
+          </nav>
+        </div>
+      </header>
+
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="relative py-20 md:py-32">
+           <div
+            aria-hidden="true"
+            className="absolute inset-0 -z-10 h-full w-full bg-background"
+          >
+            <div className="absolute bottom-0 left-0 right-0 top-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px]"></div>
+          </div>
+
+          <div className="container px-4 text-center">
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.5, ease: "easeInOut" }}
+            >
+              <Badge variant="outline" className="mb-6 border-primary/50 bg-primary/10 text-primary">
+                Find Your Perfect Gym Partner
+              </Badge>
+              <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-6">
+                Connect, Train, &amp; Transform
+              </h1>
+              <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
+                GymFlow helps you find workout partners who match your goals, schedule, and fitness level. Stop training alone, start achieving more together.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                 <Button size="lg" asChild>
+                    <Link href="/signup">Sign Up for Free</Link>
+                 </Button>
+                 <Button size="lg" variant="outline" asChild>
+                    <Link href="/login">Login</Link>
+                 </Button>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* Features Section */}
+        <section className="py-20 md:py-32 bg-muted/20">
+          <div className="container px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tighter">
+                Everything You Need in One App
+              </h2>
+              <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
+                From finding the right partner to tracking every part of your fitness journey.
+              </p>
+            </div>
+            <motion.div
+              className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
+              variants={containerVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.2 }}
+            >
+              {[
+                { icon: Users, title: 'Smart Matching', desc: 'Our AI finds partners who match your goals, location, and schedule.' },
+                { icon: Heart, title: 'Real-time Chat', desc: 'Connect instantly with matches to plan workouts and motivate each other.' },
+                { icon: BarChart3, title: 'Progress Tracking', desc: 'Monitor your personal records, workout consistency, and gains over time.' },
+                { icon: Calendar, title: 'Workout Scheduling', desc: 'Plan your weekly workouts and track your gym attendance automatically.' },
+                { icon: Utensils, title: 'Meal Planner', desc: 'Organize your nutrition to perfectly complement your training regimen.' },
+                { icon: Dumbbell, title: 'AI Suggestions', desc: 'Get AI-powered suggestions for alternative exercises based on your equipment.' },
+              ].map((feature, i) => (
+                <motion.div key={i} variants={itemVariants}>
+                  <Card className="h-full bg-card/50 hover:bg-card/90 transition-colors border-border/50 hover:border-primary/30">
+                    <CardHeader>
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-primary/10 rounded-lg">
+                           <feature.icon className="h-6 w-6 text-primary" />
+                        </div>
+                        <CardTitle>{feature.title}</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground">{feature.desc}</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               ))}
-            </ul>
-            <Button asChild className="w-full">
-              <Link href="/workouts">Start Workout</Link>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-20 md:py-32">
+          <div className="container px-4 text-center">
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tighter mb-4">
+              Ready to Find Your Flow?
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto mb-8">
+              Join thousands of others who are already making connections and crushing their fitness goals. It's free to get started.
+            </p>
+            <Button size="lg" asChild>
+              <Link href="/signup">Start Your Journey Today</Link>
             </Button>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </section>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t">
+        <div className="container flex flex-col md:flex-row items-center justify-between py-6 gap-4">
+          <div className="flex items-center gap-2">
+            <Dumbbell className="h-5 w-5" />
+            <p className="text-sm font-semibold">GymFlow</p>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            © {new Date().getFullYear()} GymFlow. All rights reserved.
+          </p>
+          <div className="flex gap-4">
+            <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">Privacy Policy</Link>
+            <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">Terms of Service</Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
+
+// Add Badge and Card components if they are not globally available.
+import { cva } from "class-variance-authority";
+import { cn } from "@/lib/utils";
+import React from "react";
+
+const badgeVariants = cva(
+  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  {
+    variants: {
+      variant: {
+        default: "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
+        secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        destructive: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
+        outline: "text-foreground",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  }
+);
+
+function Badge({ className, variant, ...props }: React.HTMLAttributes<HTMLDivElement> & { variant?: any }) {
+  return (
+    <div className={cn(badgeVariants({ variant }), className)} {...props} />
+  );
+}
+
+
+const Card = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(
+      "rounded-lg border bg-card text-card-foreground shadow-sm",
+      className
+    )}
+    {...props}
+  />
+))
+Card.displayName = "Card"
+
+const CardHeader = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("flex flex-col space-y-1.5 p-6", className)}
+    {...props}
+  />
+))
+CardHeader.displayName = "CardHeader"
+
+const CardTitle = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLHeadingElement>
+>(({ className, ...props }, ref) => (
+  <h3
+    ref={ref}
+    className={cn(
+      "text-2xl font-semibold leading-none tracking-tight",
+      className
+    )}
+    {...props}
+  />
+))
+CardTitle.displayName = "CardTitle"
+
+
+const CardContent = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+))
+CardContent.displayName = "CardContent"
