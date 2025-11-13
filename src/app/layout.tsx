@@ -3,6 +3,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase';
 import { AuthLayout } from '@/hooks/use-auth';
+import { WorkoutProvider } from '@/context/WorkoutContext';
 
 export const metadata: Metadata = {
   title: 'GymFlow',
@@ -26,9 +27,11 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <FirebaseClientProvider>
+          <WorkoutProvider>
             <AuthLayout>
               {children}
             </AuthLayout>
+          </WorkoutProvider>
         </FirebaseClientProvider>
         <Toaster />
       </body>

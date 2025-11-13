@@ -26,6 +26,7 @@ import type { UserProfile } from '@/types/user';
 import { useAutoCheckin } from './use-auto-checkin';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { initialWorkouts } from '@/lib/workout-data';
+import { useWorkouts } from '@/context/WorkoutContext';
 
 const quotes = [
     "Strong today, unstoppable tomorrow 💪",
@@ -122,6 +123,7 @@ export default function SchedulePage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { workouts, setWorkouts } = useWorkouts();
   
   const userDocRef = useMemoFirebase(() => {
       if (!user) return null;
@@ -132,7 +134,6 @@ export default function SchedulePage() {
   
   useAutoCheckin(userProfile, userDocRef);
 
-  const [weeklyWorkouts, setWeeklyWorkouts] = useState(initialWorkouts);
   const [isEditing, setIsEditing] = useState<number | null>(null);
   const [editingData, setEditingData] = useState<any>(null);
   const [expandedCard, setExpandedCard] = useState<number | null>(null);
@@ -167,16 +168,16 @@ export default function SchedulePage() {
   
   const handleEditClick = (e: React.MouseEvent, index: number) => {
     e.stopPropagation();
-    const workoutToEdit = weeklyWorkouts[index];
+    const workoutToEdit = workouts[index];
     setEditingData({ ...workoutToEdit, exercises: [...workoutToEdit.exercises.map(ex => ({...ex}))] });
     setIsEditing(index);
   }
 
   const handleSaveEdit = () => {
     if (isEditing === null) return;
-    const updatedWorkouts = [...weeklyWorkouts];
+    const updatedWorkouts = [...workouts];
     updatedWorkouts[isEditing] = editingData;
-    setWeeklyWorkouts(updatedWorkouts);
+    setWorkouts(updatedWorkouts);
     setIsEditing(null);
     setEditingData(null);
     toast({
@@ -186,7 +187,7 @@ export default function SchedulePage() {
   };
   
   const handleResetSchedule = () => {
-    setWeeklyWorkouts(initialWorkouts);
+    setWorkouts(initialWorkouts);
     toast({
         title: "Schedule Reset",
         description: "Your workout schedule has been reset. ✅",
@@ -243,7 +244,7 @@ export default function SchedulePage() {
 
       {/* Workout Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {weeklyWorkouts.map((item, index) => (
+        {workouts.map((item, index) => (
           <motion.div
             key={item.day}
             layoutId={`card-container-${item.day}`}
@@ -302,7 +303,7 @@ export default function SchedulePage() {
         {detailedViewCard !== null && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md" onClick={() => setDetailedViewCard(null)}>
             <motion.div
-              layoutId={`card-container-${weeklyWorkouts[detailedViewCard].day}`}
+              layoutId={`card-container-${workouts[detailedViewCard].day}`}
               className="w-[90%] max-w-2xl h-auto bg-card/90 rounded-2xl shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
@@ -313,14 +314,14 @@ export default function SchedulePage() {
                   >
                     <X className="h-6 w-6" />
                   </button>
-                  <h2 className="text-5xl font-bold mb-2">{weeklyWorkouts[detailedViewCard].day}</h2>
+                  <h2 className="text-5xl font-bold mb-2">{workouts[detailedViewCard].day}</h2>
                   <p className="text-7xl font-extrabold text-foreground/5 uppercase tracking-tighter -mt-2">Workout Plan</p>
                   
                   <div className="mt-8 text-lg text-muted-foreground">
-                      <h4 className="text-2xl font-semibold text-foreground mb-4">{weeklyWorkouts[detailedViewCard].workout}</h4>
-                      {weeklyWorkouts[detailedViewCard].exercises.length > 0 ? (
+                      <h4 className="text-2xl font-semibold text-foreground mb-4">{workouts[detailedViewCard].workout}</h4>
+                      {workouts[detailedViewCard].exercises.length > 0 ? (
                           <ul className="space-y-3">
-                              {weeklyWorkouts[detailedViewCard].exercises.map((ex, i) => (
+                              {workouts[detailedViewCard].exercises.map((ex, i) => (
                                   <li key={i} className="flex items-center gap-4">
                                     <Dumbbell className="h-5 w-5 text-primary"/>
                                     <span>{ex.name}: <span className="font-mono text-foreground/80">{ex.sets}</span></span>

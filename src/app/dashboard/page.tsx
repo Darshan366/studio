@@ -18,7 +18,8 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import WeeklyProgressChart from '@/components/weekly-progress-chart';
 import { useUser } from '@/firebase';
-import { initialWorkouts } from '@/lib/workout-data';
+import { useWorkouts } from '@/context/WorkoutContext';
+import { useEffect, useState } from 'react';
 
 const quickStats = [
   {
@@ -43,24 +44,35 @@ const quickStats = [
   },
 ];
 
-const dayOfWeek = new Date().toLocaleString('en-US', { weekday: 'long' });
-const todaysWorkout = initialWorkouts.find(w => w.day === dayOfWeek) || {
-    day: 'Rest Day',
-    workout: 'No workout scheduled',
-    progress: 0,
-    exercises: [],
-};
-
-// We don't have a 'done' state in the schedule data, so we'll simulate it for now.
-// In a real app, this would come from user interaction.
-const simulatedExercises = todaysWorkout.exercises.map((ex, index) => ({
-    ...ex,
-    done: index < 2, // Assume first two are done
-}))
-
-
 export default function DashboardPage() {
   const { user } = useUser();
+  const { workouts } = useWorkouts();
+  const [todaysWorkout, setTodaysWorkout] = useState({
+      day: 'Rest Day',
+      workout: 'No workout scheduled',
+      progress: 0,
+      exercises: [],
+  });
+
+  useEffect(() => {
+    const dayOfWeek = new Date().toLocaleString('en-US', { weekday: 'long' });
+    const workoutForToday = workouts.find(w => w.day === dayOfWeek) || {
+        day: 'Rest Day',
+        workout: 'No workout scheduled',
+        progress: 0,
+        exercises: [],
+    };
+    setTodaysWorkout(workoutForToday);
+  }, [workouts]);
+
+
+  // We don't have a 'done' state in the schedule data, so we'll simulate it for now.
+  // In a real app, this would come from user interaction.
+  const simulatedExercises = todaysWorkout.exercises.map((ex, index) => ({
+      ...ex,
+      done: index < 2, // Assume first two are done
+  }))
+
 
   return (
     <div className="space-y-6">
