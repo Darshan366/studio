@@ -1,5 +1,5 @@
 import { getExerciseSuggestion } from '@/ai/flows/exercise-suggestion-flow';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'edge';
 
@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     const { prompt } = await req.json();
 
     if (!prompt) {
-      return new Response('Prompt is required', { status: 400 });
+      return new NextResponse('Prompt is required', { status: 400 });
     }
 
     const stream = await getExerciseSuggestion(prompt);
@@ -20,6 +20,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (e: any) {
     console.error('Error in AI API route:', e);
-    return new Response(`Error: ${e.message}`, { status: 500 });
+    return new NextResponse(`Error: ${e.message}`, { status: 500 });
   }
 }
