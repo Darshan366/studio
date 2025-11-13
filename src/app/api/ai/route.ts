@@ -1,8 +1,6 @@
 import { getExerciseSuggestion } from '@/ai/flows/exercise-suggestion-flow';
 import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'edge';
-
 export async function POST(req: NextRequest) {
   try {
     const { prompt } = await req.json();
