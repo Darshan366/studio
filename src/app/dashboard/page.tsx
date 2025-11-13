@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import WeeklyProgressChart from '@/components/weekly-progress-chart';
 import { useUser } from '@/firebase';
+import { initialWorkouts } from '@/lib/workout-data';
 
 const quickStats = [
   {
@@ -42,15 +43,21 @@ const quickStats = [
   },
 ];
 
-const todaysWorkout = {
-  name: 'Full Body Strength',
-  exercises: [
-    { name: 'Barbell Squats', sets: '3x5', done: true },
-    { name: 'Bench Press', sets: '3x5', done: true },
-    { name: 'Deadlifts', sets: '1x5', done: false },
-    { name: 'Overhead Press', sets: '3x8', done: false },
-  ],
+const dayOfWeek = new Date().toLocaleString('en-US', { weekday: 'long' });
+const todaysWorkout = initialWorkouts.find(w => w.day === dayOfWeek) || {
+    day: 'Rest Day',
+    workout: 'No workout scheduled',
+    progress: 0,
+    exercises: [],
 };
+
+// We don't have a 'done' state in the schedule data, so we'll simulate it for now.
+// In a real app, this would come from user interaction.
+const simulatedExercises = todaysWorkout.exercises.map((ex, index) => ({
+    ...ex,
+    done: index < 2, // Assume first two are done
+}))
+
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -91,11 +98,11 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Today&apos;s Workout</CardTitle>
-            <CardDescription>{todaysWorkout.name}</CardDescription>
+            <CardDescription>{todaysWorkout.workout}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <ul className="space-y-3">
-              {todaysWorkout.exercises.map((ex) => (
+              {simulatedExercises.map((ex) => (
                 <li key={ex.name} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div
@@ -132,9 +139,13 @@ export default function DashboardPage() {
                 </li>
               ))}
             </ul>
-            <Button asChild className="w-full">
-              <Link href="/workouts">Start Workout</Link>
-            </Button>
+             {todaysWorkout.exercises.length > 0 ? (
+                <Button asChild className="w-full">
+                  <Link href="/schedule">Start Workout</Link>
+                </Button>
+              ) : (
+                <p className="text-center text-sm text-muted-foreground pt-4">Enjoy your rest day!</p>
+              )}
           </CardContent>
         </Card>
       </div>
