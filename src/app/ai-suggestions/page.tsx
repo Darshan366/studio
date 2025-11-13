@@ -27,6 +27,9 @@ export default function AISuggestionsPage() {
         const data = await res.json();
 
         if (!res.ok) {
+            if (res.status === 501) { // 501 for Not Implemented (or not configured)
+                throw new Error("The AI feature is not configured. Please set the NEXT_PUBLIC_FIREBASE_AI_URL environment variable.");
+            }
             throw new Error(data.error || "An unknown error occurred.");
         }
         

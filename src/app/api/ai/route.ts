@@ -12,7 +12,8 @@ export async function POST(req: Request) {
     const functionUrl = process.env.NEXT_PUBLIC_FIREBASE_AI_URL;
     if (!functionUrl) {
         console.error("Firebase AI function URL not configured.");
-        return NextResponse.json({ error: "Server not configured" }, { status: 500 });
+        // Use a more specific status code to indicate the feature is not configured.
+        return NextResponse.json({ error: "Server not configured" }, { status: 501 });
     }
 
     const response = await fetch(functionUrl, {
