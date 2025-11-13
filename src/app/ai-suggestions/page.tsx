@@ -28,7 +28,7 @@ export default function AISuggestionsPage() {
 
         if (!res.ok) {
             if (res.status === 501) { // 501 for Not Implemented (or not configured)
-                throw new Error("The AI feature is not configured. Please set the NEXT_PUBLIC_FIREBASE_AI_URL environment variable.");
+                throw new Error("The AI feature is not configured. Please set the NEXT_PUBLIC_FIREBASE_AI_URL environment variable in a .env.local file and restart your server.");
             }
             throw new Error(data.error || "An unknown error occurred.");
         }
@@ -97,7 +97,7 @@ export default function AISuggestionsPage() {
       {/* ERROR MESSAGE */}
       {error && (
         <div className="mt-8 max-w-3xl w-full bg-destructive/20 border border-destructive/50 text-destructive-foreground p-4 rounded-xl">
-          <p className="font-semibold">Error</p>
+          <p className="font-semibold">Configuration Error</p>
           <p>{error}</p>
         </div>
       )}
