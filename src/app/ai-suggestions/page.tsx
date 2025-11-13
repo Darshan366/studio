@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -7,39 +8,35 @@ export default function AISuggestionsPage() {
   const [input, setInput] = useState("");
   const [response, setResponse] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit() {
     if (!input.trim()) return;
 
     setLoading(true);
     setResponse("");
+    setError(null);
 
     try {
-      const res = await fetch("/api/ai", {
-        method: "POST",
-        body: JSON.stringify({ prompt: input }),
-      });
-      
-      if (!res.body) {
-        throw new Error("No response body");
-      }
+        const res = await fetch("/api/ai", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: input }),
+        });
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let done = false;
+        const data = await res.json();
 
-      while (!done) {
-        const { value, done: readerDone } = await reader.read();
-        done = readerDone;
-        const chunk = decoder.decode(value, { stream: true });
-        setResponse((prev) => prev + chunk);
-      }
+        if (!res.ok) {
+            throw new Error(data.error || "An unknown error occurred.");
+        }
+        
+        setResponse(data.output);
 
-    } catch (error) {
-      console.error("Error fetching AI response:", error);
-      setResponse("Sorry, something went wrong. Please try again.");
+    } catch (err: any) {
+        console.error("Error fetching AI response:", err);
+        setError(err.message || "Failed to fetch response from the server.");
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
   }
   
@@ -93,12 +90,25 @@ export default function AISuggestionsPage() {
           </div>
         ))}
       </div>
+      
+      {/* ERROR MESSAGE */}
+      {error && (
+        <div className="mt-8 max-w-3xl w-full bg-destructive/20 border border-destructive/50 text-destructive-foreground p-4 rounded-xl">
+          <p className="font-semibold">Error</p>
+          <p>{error}</p>
+        </div>
+      )}
 
       {/* RESPONSE AREA */}
-      { (loading || response) && (
+      { (loading && !response) && (
+        <div className="mt-8 max-w-3xl w-full text-center text-muted-foreground">
+            <Loader2 className="animate-spin inline-block h-6 w-6" />
+            <p>Generating advice...</p>
+        </div>
+      )}
+      {response && (
         <div className="mt-8 max-w-3xl w-full bg-[#121212] border border-neutral-700 p-4 rounded-xl whitespace-pre-wrap text-neutral-200">
           {response}
-          {loading && !response && <span className="animate-pulse">|</span>}
         </div>
       )}
     </div>
