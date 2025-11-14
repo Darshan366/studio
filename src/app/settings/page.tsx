@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -199,6 +198,7 @@ export default function SettingsPage() {
     const { user } = useUser();
     const auth = useAuth();
     const app = useFirebaseApp();
+    const firestore = useFirestore();
     const { toast } = useToast();
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -228,7 +228,14 @@ export default function SettingsPage() {
             await uploadBytes(storageRef, file);
             const downloadURL = await getDownloadURL(storageRef);
             
+            // Update the user's profile in Firebase Authentication
             await updateProfile(auth.currentUser, { photoURL: downloadURL });
+            
+            // Also update the user's document in Firestore
+            const userDocRef = doc(firestore, 'users', user.uid);
+            await updateDoc(userDocRef, { photoURL: downloadURL });
+
+            // Reload the user to get the latest profile info, which will trigger the UI to update
             await auth.currentUser.reload();
             
             toast({
