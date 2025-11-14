@@ -30,9 +30,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
 import { GoogleIcon } from '@/components/icons/google';
-import { doc, serverTimestamp } from 'firebase/firestore';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 
 const formSchema = z.object({
@@ -97,7 +96,7 @@ export default function LoginPage() {
       if (additionalInfo?.isNewUser) {
         // Create a new document in Firestore for new users
         const userDocRef = doc(firestore, 'users', user.uid);
-        setDocumentNonBlocking(userDocRef, {
+        await setDoc(userDocRef, {
           uid: user.uid,
           name: user.displayName,
           email: user.email,
@@ -114,7 +113,7 @@ export default function LoginPage() {
       // AuthLayout will handle the redirect
     } catch (error) {
        if (error instanceof FirebaseError) {
-          if (error.code === 'auth/cancelled-popup-request') {
+          if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
             // User cancelled the popup, so we do nothing.
             return;
           }

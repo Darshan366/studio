@@ -8,9 +8,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider, getAdditionalUserInfo } from 'firebase/auth';
-import { doc, serverTimestamp } from 'firebase/firestore';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useAuth, useFirestore } from '@/firebase';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -83,16 +82,13 @@ export default function SignupPage() {
       );
       const user = userCredential.user;
       
-      // Update profile and then reload to ensure data is fresh
       await updateProfile(user, {
         displayName: data.name,
       });
-      await user.reload();
-
 
       const userDocRef = doc(firestore, 'users', user.uid);
       
-      setDocumentNonBlocking(userDocRef, {
+      await setDoc(userDocRef, {
         uid: user.uid,
         name: data.name,
         email: data.email,
@@ -101,6 +97,7 @@ export default function SignupPage() {
         createdAt: serverTimestamp(),
       }, { merge: true });
 
+      await user.reload();
       // The AuthLayout will handle redirecting the user to the home page
     } catch (error) {
        let description = 'An unexpected error occurred. Please try again.';
@@ -131,7 +128,7 @@ export default function SignupPage() {
       if (additionalInfo?.isNewUser) {
         // Create a new document in Firestore for new users
         const userDocRef = doc(firestore, 'users', user.uid);
-        setDocumentNonBlocking(userDocRef, {
+        await setDoc(userDocRef, {
           uid: user.uid,
           name: user.displayName,
           email: user.email,
@@ -148,7 +145,7 @@ export default function SignupPage() {
       // AuthLayout will handle the redirect
     } catch (error) {
       if (error instanceof FirebaseError) {
-        if (error.code === 'auth/cancelled-popup-request') {
+        if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
           // User cancelled the popup, so we do nothing.
           return;
         }
