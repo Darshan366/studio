@@ -28,8 +28,8 @@ type ProgressData = {
   consistencyMonth?: string;
 };
 
-// A single, reusable component for the edit dialog
-function EditDialog({
+// A single, reusable component for the edit dialog for single-value cards
+function EditMetricDialog({
   metricKey,
   label,
   currentValue,
@@ -85,6 +85,66 @@ function EditDialog({
   );
 }
 
+// A specific dialog component for editing all Personal Records
+function EditPRsDialog({
+  currentValues,
+  onSave,
+}: {
+  currentValues: { bench: string; squat: string; deadlift: string };
+  onSave: (newPRs: { bench: string; squat: string; deadlift: string }) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [bench, setBench] = useState(currentValues.bench);
+  const [squat, setSquat] = useState(currentValues.squat);
+  const [deadlift, setDeadlift] = useState(currentValues.deadlift);
+
+  useEffect(() => {
+    setBench(currentValues.bench);
+    setSquat(currentValues.squat);
+    setDeadlift(currentValues.deadlift);
+  }, [currentValues]);
+
+  const handleSave = () => {
+    onSave({ bench, squat, deadlift });
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <button className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors">
+          <Edit className="w-4 h-4" />
+        </button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Update Personal Records</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="benchPR">Bench Press (kg)</Label>
+            <Input id="benchPR" value={bench} onChange={(e) => setBench(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="squatPR">Squat (kg)</Label>
+            <Input id="squatPR" value={squat} onChange={(e) => setSquat(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="deadliftPR">Deadlift (kg)</Label>
+            <Input id="deadliftPR" value={deadlift} onChange={(e) => setDeadlift(e.target.value)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">Cancel</Button>
+          </DialogClose>
+          <Button onClick={handleSave}>Save All</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 export default function ProgressPage() {
   const { user } = useUser();
@@ -94,7 +154,6 @@ export default function ProgressPage() {
 
   const progressDocRef = useMemoFirebase(() => {
     if (!user) return null;
-    // Define a more specific path for progress metrics
     return doc(firestore, `users/${user.uid}/progress/metrics`);
   }, [user, firestore]);
 
@@ -108,7 +167,6 @@ export default function ProgressPage() {
       if (snap.exists()) {
         setData(snap.data() as ProgressData);
       } else {
-        // Set default values if no data exists
         setData({
           benchPR: '90',
           squatPR: '140',
@@ -128,12 +186,20 @@ export default function ProgressPage() {
     return () => unsubscribe();
   }, [progressDocRef]);
 
-  const handleSave = async (field: keyof ProgressData, value: string) => {
+  const handleSaveMetric = async (field: keyof ProgressData, value: string) => {
     if (!progressDocRef) return;
     await setDoc(progressDocRef, { [field]: value }, { merge: true });
-    // The onSnapshot listener will automatically update the state
   };
   
+  const handleSavePRs = async (newPRs: { bench: string; squat: string; deadlift: string }) => {
+    if (!progressDocRef) return;
+    await setDoc(progressDocRef, { 
+      benchPR: newPRs.bench,
+      squatPR: newPRs.squat,
+      deadliftPR: newPRs.deadlift,
+    }, { merge: true });
+  };
+
   if (isLoading) {
     return (
         <div className="flex h-[calc(100vh-6rem)] items-center justify-center">
@@ -155,25 +221,24 @@ export default function ProgressPage() {
             <h2 className="text-lg font-semibold">Personal Records</h2>
             <Dumbbell className="w-5 h-5 text-neutral-400" />
           </div>
+          <EditPRsDialog 
+            currentValues={{
+              bench: data.benchPR || '',
+              squat: data.squatPR || '',
+              deadlift: data.deadliftPR || '',
+            }}
+            onSave={handleSavePRs}
+          />
           <div className="space-y-2 text-neutral-300">
-             <div className="flex justify-between items-center">
-                <p><span className="text-white font-semibold">Bench:</span> {data.benchPR || 'N/A'} kg</p>
-                <EditDialog metricKey="benchPR" label="Bench PR" currentValue={data.benchPR || ''} onSave={handleSave} />
-            </div>
-             <div className="flex justify-between items-center">
-                <p><span className="text-white font-semibold">Squat:</span> {data.squatPR || 'N/A'} kg</p>
-                <EditDialog metricKey="squatPR" label="Squat PR" currentValue={data.squatPR || ''} onSave={handleSave} />
-            </div>
-             <div className="flex justify-between items-center">
-                <p><span className="text-white font-semibold">Deadlift:</span> {data.deadliftPR || 'N/A'} kg</p>
-                <EditDialog metricKey="deadliftPR" label="Deadlift PR" currentValue={data.deadliftPR || ''} onSave={handleSave} />
-            </div>
+             <p><span className="text-white font-semibold">Bench:</span> {data.benchPR || 'N/A'} kg</p>
+             <p><span className="text-white font-semibold">Squat:</span> {data.squatPR || 'N/A'} kg</p>
+             <p><span className="text-white font-semibold">Deadlift:</span> {data.deadliftPR || 'N/A'} kg</p>
           </div>
         </div>
 
         {/* VOLUME CARD */}
         <div className="relative bg-[#111111] border border-neutral-800 p-5 rounded-2xl shadow-lg">
-           <EditDialog metricKey="weeklyVolume" label="Weekly Volume" currentValue={data.weeklyVolume || ''} onSave={handleSave} />
+           <EditMetricDialog metricKey="weeklyVolume" label="Weekly Volume" currentValue={data.weeklyVolume || ''} onSave={handleSaveMetric} />
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold">Weekly Volume</h2>
             <BarChart className="w-5 h-5 text-neutral-400" />
@@ -186,7 +251,7 @@ export default function ProgressPage() {
 
         {/* CONSISTENCY CARD */}
         <div className="relative bg-[#111111] border border-neutral-800 p-5 rounded-2xl shadow-lg">
-            <EditDialog metricKey="consistencyWeek" label="Weekly Consistency" currentValue={data.consistencyWeek || ''} onSave={handleSave} />
+            <EditMetricDialog metricKey="consistencyWeek" label="Weekly Consistency" currentValue={data.consistencyWeek || ''} onSave={handleSaveMetric} />
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold">Consistency</h2>
             <Clock className="w-5 h-5 text-neutral-400" />
@@ -217,5 +282,3 @@ export default function ProgressPage() {
     </div>
   );
 }
-
-    
