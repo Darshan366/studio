@@ -28,63 +28,6 @@ type ProgressData = {
   consistencyMonth?: string;
 };
 
-// A single, reusable component for the edit dialog for single-value cards
-function EditMetricDialog({
-  metricKey,
-  label,
-  currentValue,
-  onSave,
-}: {
-  metricKey: keyof ProgressData;
-  label: string;
-  currentValue: string;
-  onSave: (field: keyof ProgressData, value: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [inputValue, setInputValue] = useState(currentValue);
-
-  useEffect(() => {
-    setInputValue(currentValue);
-  }, [currentValue]);
-
-  const handleSave = () => {
-    onSave(metricKey, inputValue);
-    setOpen(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <button className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors">
-          <Edit className="w-4 h-4" />
-        </button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Update {label}</DialogTitle>
-        </DialogHeader>
-        <div className="py-4">
-          <Label htmlFor={metricKey} className="sr-only">
-            {label}
-          </Label>
-          <Input
-            id={metricKey}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder={`Enter new ${label.toLowerCase()}`}
-          />
-        </div>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
-          </DialogClose>
-          <Button onClick={handleSave}>Save</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 // A specific dialog component for editing all Personal Records
 function EditPRsDialog({
   currentValues,
@@ -199,6 +142,60 @@ function EditVolumeDialog({
   );
 }
 
+// A specific dialog component for editing Consistency
+function EditConsistencyDialog({
+  currentValues,
+  onSave,
+}: {
+  currentValues: { week: string; month: string };
+  onSave: (newConsistency: { week: string; month: string }) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [week, setWeek] = useState(currentValues.week);
+  const [month, setMonth] = useState(currentValues.month);
+
+  useEffect(() => {
+    setWeek(currentValues.week);
+    setMonth(currentValues.month);
+  }, [currentValues]);
+
+  const handleSave = () => {
+    onSave({ week, month });
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <button className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors">
+          <Edit className="w-4 h-4" />
+        </button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Update Consistency</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="consistencyWeek">This Week (e.g., 4 / 5 days)</Label>
+            <Input id="consistencyWeek" value={week} onChange={(e) => setWeek(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="consistencyMonth">This Month (e.g., 17 / 20 days)</Label>
+            <Input id="consistencyMonth" value={month} onChange={(e) => setMonth(e.target.value)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">Cancel</Button>
+          </DialogClose>
+          <Button onClick={handleSave}>Save Changes</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 export default function ProgressPage() {
   const { user } = useUser();
@@ -244,11 +241,6 @@ export default function ProgressPage() {
     return () => unsubscribe();
   }, [progressDocRef]);
 
-  const handleSaveMetric = async (field: keyof ProgressData, value: string) => {
-    if (!progressDocRef) return;
-    await setDoc(progressDocRef, { [field]: value }, { merge: true });
-  };
-  
   const handleSavePRs = async (newPRs: { bench: string; squat: string; deadlift: string }) => {
     if (!progressDocRef) return;
     await setDoc(progressDocRef, { 
@@ -263,6 +255,14 @@ export default function ProgressPage() {
     await setDoc(progressDocRef, {
       weeklyVolume: newVolume.volume,
       weeklyChange: newVolume.change,
+    }, { merge: true });
+  };
+
+  const handleSaveConsistency = async (newConsistency: { week: string; month: string }) => {
+    if (!progressDocRef) return;
+    await setDoc(progressDocRef, {
+      consistencyWeek: newConsistency.week,
+      consistencyMonth: newConsistency.month,
     }, { merge: true });
   };
 
@@ -324,16 +324,22 @@ export default function ProgressPage() {
 
         {/* CONSISTENCY CARD */}
         <div className="relative bg-[#111111] border border-neutral-800 p-5 rounded-2xl shadow-lg">
-            <EditMetricDialog metricKey="consistencyWeek" label="Weekly Consistency" currentValue={data.consistencyWeek || ''} onSave={handleSaveMetric} />
+            <EditConsistencyDialog
+              currentValues={{
+                week: data.consistencyWeek || '',
+                month: data.consistencyMonth || '',
+              }}
+              onSave={handleSaveConsistency}
+            />
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold">Consistency</h2>
             <Clock className="w-5 h-5 text-neutral-400" />
           </div>
           <p className="text-neutral-300">
-            <span className="text-white font-semibold">This Week:</span> {data.consistencyWeek || 'N/A'} days
+            <span className="text-white font-semibold">This Week:</span> {data.consistencyWeek || 'N/A'}
           </p>
           <p className="text-neutral-300 mt-1">
-            <span className="text-white font-semibold">This Month:</span> {data.consistencyMonth || 'N/A'} days
+            <span className="text-white font-semibold">This Month:</span> {data.consistencyMonth || 'N/A'}
           </p>
         </div>
 
