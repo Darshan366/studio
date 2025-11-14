@@ -346,17 +346,6 @@ export default function SchedulePage() {
         </Button>
       </div>
 
-
-      {/* Floating AI Button */}
-      <motion.div whileHover={{ scale: 1.1 }} className="fixed bottom-8 right-8 z-50">
-         <Button
-          size="lg"
-          className="rounded-full shadow-lg bg-gradient-to-r from-blue-500 to-purple-600 text-primary-foreground hover:from-blue-600 hover:to-purple-700"
-        >
-          <Bot className="mr-2 h-5 w-5" />
-          AI Suggest Workout
-        </Button>
-      </motion.div>
       
        {/* Edit Modal */}
        <Dialog open={isEditing !== null} onOpenChange={(open) => !open && setIsEditing(null)}>
