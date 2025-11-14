@@ -1,3 +1,4 @@
+
 // src/app/dashboard/page.tsx
 'use client';
 import {
@@ -65,7 +66,7 @@ export default function DashboardPage() {
 
   const quickStats = [
     {
-      value: '12',
+      value: progressData?.consistencyMonth || 'N/A',
       label: 'Workouts this month',
       icon: Activity,
     },
