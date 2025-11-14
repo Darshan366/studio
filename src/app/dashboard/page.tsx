@@ -7,6 +7,9 @@ import {
   TrendingUp,
   Dumbbell,
   BarChart,
+  Target,
+  Repeat,
+  Trophy,
 } from 'lucide-react';
 import {
   Card,
@@ -15,6 +18,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import WeeklyProgressChart from '@/components/weekly-progress-chart';
@@ -66,6 +76,34 @@ export default function DashboardPage() {
     },
   ];
 
+  const allStats = [
+    {
+      value: `${progressData?.benchPR || 'N/A'} kg`,
+      label: 'Bench Press PR',
+      icon: Trophy,
+    },
+     {
+      value: `${progressData?.squatPR || 'N/A'} kg`,
+      label: 'Squat PR',
+      icon: Trophy,
+    },
+     {
+      value: `${progressData?.deadliftPR || 'N/A'} kg`,
+      label: 'Deadlift PR',
+      icon: Trophy,
+    },
+    {
+      value: `${parseInt(progressData?.weeklyVolume || '0').toLocaleString()} kg`,
+      label: 'Weekly Volume',
+      icon: BarChart,
+    },
+    {
+      value: progressData?.consistencyWeek || 'N/A',
+      label: 'Weekly Consistency',
+      icon: Repeat
+    }
+  ];
+
   useEffect(() => {
     const dayOfWeek = new Date().toLocaleString('en-US', { weekday: 'long' });
     const workoutForToday = workouts.find(w => w.day === dayOfWeek) || {
@@ -107,19 +145,34 @@ export default function DashboardPage() {
           </Card>
         ))}
          <Card className="col-span-1 sm:col-span-2">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Progress Snapshot</CardTitle>
-               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
-               <div>
-                  <p className="text-2xl font-bold">{progressData?.benchPR || 'N/A'} kg</p>
-                  <p className="text-xs text-muted-foreground">Bench Press PR</p>
-               </div>
-                <div>
-                  <p className="text-2xl font-bold">{parseInt(progressData?.weeklyVolume || '0').toLocaleString()} kg</p>
-                  <p className="text-xs text-muted-foreground">Weekly Volume</p>
-               </div>
+            <CardContent>
+               <Carousel
+                opts={{
+                    align: "start",
+                }}
+                className="w-full"
+                >
+                <CarouselContent>
+                    {allStats.map((stat, index) => (
+                    <CarouselItem key={index} className="md:basis-1/2">
+                        <div className="p-1">
+                            <div className="flex items-start gap-3 rounded-lg p-4">
+                                <stat.icon className="h-6 w-6 text-muted-foreground mt-1" />
+                                <div>
+                                    <p className="text-2xl font-bold">{stat.value}</p>
+                                    <p className="text-xs text-muted-foreground">{stat.label}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </CarouselItem>
+                    ))}
+                </CarouselContent>
+                <CarouselPrevious className="absolute left-[-20px] top-1/2 -translate-y-1/2" />
+                <CarouselNext className="absolute right-[-20px] top-1/2 -translate-y-1/2" />
+                </Carousel>
             </CardContent>
           </Card>
       </div>
