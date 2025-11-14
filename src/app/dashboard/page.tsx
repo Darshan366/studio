@@ -234,7 +234,7 @@ export default function DashboardPage() {
             </ul>
              {todaysWorkout.exercises.length > 0 ? (
                 <Button asChild className="w-full">
-                  <Link href="/schedule">Start Workout</Link>
+                  <Link href="/schedule">View Full Schedule</Link>
                 </Button>
               ) : (
                 <p className="text-center text-sm text-muted-foreground pt-4">Enjoy your rest day!</p>
