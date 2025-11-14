@@ -6,6 +6,7 @@ import {
   Flame,
   TrendingUp,
   Dumbbell,
+  BarChart,
 } from 'lucide-react';
 import {
   Card,
@@ -17,42 +18,53 @@ import {
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import WeeklyProgressChart from '@/components/weekly-progress-chart';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useWorkouts } from '@/context/WorkoutContext';
 import { useEffect, useState } from 'react';
+import { doc } from 'firebase/firestore';
 
-const quickStats = [
-  {
-    value: '12',
-    label: 'Workouts this month',
-    icon: Activity,
-  },
-  {
-    value: '2,450',
-    label: 'Calories burned',
-    icon: Flame,
-  },
-  {
-    value: '8 days',
-    label: 'Active streak',
-    icon: Calendar,
-  },
-  {
-    value: '+5kg',
-    label: 'Bench Press PR',
-    icon: TrendingUp,
-  },
-];
+type ProgressData = {
+  benchPR?: string;
+  squatPR?: string;
+  deadliftPR?: string;
+  weeklyVolume?: string;
+  weeklyChange?: string;
+  consistencyWeek?: string;
+  consistencyMonth?: string;
+};
+
 
 export default function DashboardPage() {
   const { user } = useUser();
   const { workouts } = useWorkouts();
+  const firestore = useFirestore();
+
+  const progressDocRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, `users/${user.uid}/progress/metrics`);
+  }, [user, firestore]);
+
+  const { data: progressData } = useDoc<ProgressData>(progressDocRef);
+
   const [todaysWorkout, setTodaysWorkout] = useState({
       day: 'Rest Day',
       workout: 'No workout scheduled',
       progress: 0,
       exercises: [],
   });
+
+  const quickStats = [
+    {
+      value: '12',
+      label: 'Workouts this month',
+      icon: Activity,
+    },
+    {
+      value: '8 days',
+      label: 'Active streak',
+      icon: Calendar,
+    },
+  ];
 
   useEffect(() => {
     const dayOfWeek = new Date().toLocaleString('en-US', { weekday: 'long' });
@@ -94,6 +106,22 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         ))}
+         <Card className="col-span-1 sm:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Progress Snapshot</CardTitle>
+               <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4">
+               <div>
+                  <p className="text-2xl font-bold">{progressData?.benchPR || 'N/A'} kg</p>
+                  <p className="text-xs text-muted-foreground">Bench Press PR</p>
+               </div>
+                <div>
+                  <p className="text-2xl font-bold">{parseInt(progressData?.weeklyVolume || '0').toLocaleString()} kg</p>
+                  <p className="text-xs text-muted-foreground">Weekly Volume</p>
+               </div>
+            </CardContent>
+          </Card>
       </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
