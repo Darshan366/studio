@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
-import { Heart, X, Loader2 } from 'lucide-react';
+import { Heart, X, Loader2, MapPin } from 'lucide-react';
 import { useUser, useFirestore, useMemoFirebase, useCollection, errorEmitter, FirestorePermissionError } from '@/firebase';
 import {
   collection,
@@ -205,11 +205,17 @@ export default function MatchCard() {
             <h2 className="text-2xl font-bold">{currentProfile.name}</h2>
           </div>
         </div>
-        <CardContent className="p-4">
-          <div className="mb-4 flex items-center gap-2">
+        <CardContent className="p-4 space-y-2">
+          <div className="flex items-center gap-2">
             <Badge>{currentProfile.fitnessLevel}</Badge>
           </div>
-          <p className="text-muted-foreground h-16">{currentProfile.bio || "No bio yet."}</p>
+           {currentProfile.gymAddress && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <MapPin className="h-4 w-4" />
+                <span>{currentProfile.gymAddress}</span>
+            </div>
+           )}
+          <p className="text-muted-foreground h-12 pt-1">{currentProfile.bio || "No bio yet."}</p>
         </CardContent>
       </Card>
       <div className="mt-4 flex justify-center space-x-4">
