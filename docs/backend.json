@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -47,6 +48,20 @@
         }
       },
       "required": ["uid", "name", "email", "fitnessLevel"]
+    },
+    "ProgressMetrics": {
+        "title": "Progress Metrics",
+        "description": "Represents a user's trackable fitness metrics.",
+        "type": "object",
+        "properties": {
+            "benchPR": { "type": "string", "description": "Bench Press Personal Record" },
+            "squatPR": { "type": "string", "description": "Squat Personal Record" },
+            "deadliftPR": { "type": "string", "description": "Deadlift Personal Record" },
+            "weeklyVolume": { "type": "string", "description": "Total weekly lifting volume" },
+            "weeklyChange": { "type": "string", "description": "Percentage change in volume from last week" },
+            "consistencyWeek": { "type": "string", "description": "Days attended this week" },
+            "consistencyMonth": { "type": "string", "description": "Days attended this month" }
+        }
     },
     "Swipe": {
       "title": "Swipe",
@@ -148,6 +163,10 @@
       "schema": { "$ref": "#/entities/UserProfile" },
       "description": "Stores public user profile information."
     },
+     "/users/{userId}/progress/metrics": {
+      "schema": { "$ref": "#/entities/ProgressMetrics" },
+      "description": "Stores a user's editable progress metrics."
+    },
     "/swipes/{swipeId}": {
       "schema": { "$ref": "#/entities/Swipe" },
       "description": "Stores individual swipe actions. Write-only for clients."
@@ -170,3 +189,5 @@
     }
   }
 }
+
+    

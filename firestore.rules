@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Firestore Security Rules for the FitConnect app.
  *
@@ -6,6 +7,7 @@
  *
  * Data Structure:
  * - /users/{userId}: Public user profile information.
+ * - /users/{userId}/progress/metrics: User's private, editable progress data.
  * - /swipes/{swipeId}: Stores individual swipe actions.
  * - /matches/{matchId}: Stores mutual matches.
  * - /conversations/{matchId}: Stores conversation metadata.
@@ -14,7 +16,7 @@
  *
  * Key Security Decisions:
  * - Public read access to user profiles, matches, and conversations.
- * - Owner-only write access to user profiles, swipes and notifications.
+ * - Owner-only write access to user profiles, progress metrics, swipes and notifications.
  * - Participants-only write access to conversations and messages.
  * - Server-side creation of matches.
  */
@@ -36,6 +38,17 @@ service cloud.firestore {
       allow create: if request.auth.uid == userId;
       allow update: if request.auth.uid == userId && resource != null;
       allow delete: if request.auth.uid == userId && resource != null;
+        
+      /**
+       * @description Rules for user's editable progress metrics.
+       * @path /users/{userId}/progress/metrics
+       * @allow (get, create, update): Only the owner can read or write their own progress.
+       * @deny (list, delete): Listing or deleting the metrics document is not allowed.
+       */
+      match /progress/metrics {
+        allow get, create, update: if request.auth.uid == userId;
+        allow list, delete: if false;
+      }
     }
 
     /**
@@ -114,3 +127,5 @@ service cloud.firestore {
     }
   }
 }
+
+    
