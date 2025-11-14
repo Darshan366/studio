@@ -28,7 +28,7 @@ export default function AISuggestionsPage() {
 
         if (!res.ok) {
             if (res.status === 501) { // 501 for Not Implemented (or not configured)
-                throw new Error("The AI feature is not configured. Please set the NEXT_PUBLIC_FIREBASE_AI_URL environment variable in a .env.local file and restart your server.");
+                throw new Error("501");
             }
             throw new Error(data.error || "An unknown error occurred.");
         }
@@ -95,12 +95,27 @@ export default function AISuggestionsPage() {
       </div>
       
       {/* ERROR MESSAGE */}
-      {error && (
+      {error === "501" && (
+        <div className="mt-8 max-w-3xl w-full bg-blue-900/30 border border-blue-500/50 text-blue-200 p-6 rounded-2xl space-y-4">
+          <h3 className="font-semibold text-lg text-white">🚀 AI Feature Requires Deployment</h3>
+          <p className="text-blue-300">This feature uses a backend Cloud Function to connect to the AI. To use it, you first need to deploy the function to get its public URL.</p>
+          <div className="space-y-2 text-sm">
+              <p>1. Open a terminal and run the following command to deploy:</p>
+              <code className="block bg-black/50 px-3 py-2 rounded-md text-blue-100 font-mono text-xs">firebase deploy --only functions</code>
+              <p>2. After deployment, the terminal will show you a "Function URL" for `exerciseAI`.</p>
+              <p>3. Create a file named `.env.local` in the root of your project and add the URL:</p>
+              <code className="block bg-black/50 px-3 py-2 rounded-md text-blue-100 font-mono text-xs">NEXT_PUBLIC_FIREBASE_AI_URL="YOUR_FUNCTION_URL_HERE"</code>
+              <p>4. Restart your local development server for the change to take effect.</p>
+          </div>
+        </div>
+      )}
+      {error && error !== "501" && (
         <div className="mt-8 max-w-3xl w-full bg-destructive/20 border border-destructive/50 text-destructive-foreground p-4 rounded-xl">
-          <p className="font-semibold">Configuration Error</p>
+          <p className="font-semibold">An Error Occurred</p>
           <p>{error}</p>
         </div>
       )}
+
 
       {/* RESPONSE AREA */}
       { (loading && !response) && (
