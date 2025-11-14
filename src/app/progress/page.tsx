@@ -145,6 +145,60 @@ function EditPRsDialog({
   );
 }
 
+// A specific dialog component for editing Weekly Volume
+function EditVolumeDialog({
+  currentValues,
+  onSave,
+}: {
+  currentValues: { volume: string; change: string };
+  onSave: (newVolume: { volume: string; change: string }) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [volume, setVolume] = useState(currentValues.volume);
+  const [change, setChange] = useState(currentValues.change);
+
+  useEffect(() => {
+    setVolume(currentValues.volume);
+    setChange(currentValues.change);
+  }, [currentValues]);
+
+  const handleSave = () => {
+    onSave({ volume, change });
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <button className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors">
+          <Edit className="w-4 h-4" />
+        </button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Update Weekly Volume</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="weeklyVolume">Weekly Volume (kg)</Label>
+            <Input id="weeklyVolume" value={volume} onChange={(e) => setVolume(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="weeklyChange">Weekly Change (%)</Label>
+            <Input id="weeklyChange" value={change} onChange={(e) => setChange(e.target.value)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">Cancel</Button>
+          </DialogClose>
+          <Button onClick={handleSave}>Save Changes</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 export default function ProgressPage() {
   const { user } = useUser();
@@ -167,7 +221,8 @@ export default function ProgressPage() {
       if (snap.exists()) {
         setData(snap.data() as ProgressData);
       } else {
-        setData({
+        // Set default data if document doesn't exist
+        const defaultData = {
           benchPR: '90',
           squatPR: '140',
           deadliftPR: '160',
@@ -175,7 +230,10 @@ export default function ProgressPage() {
           weeklyChange: '6',
           consistencyWeek: '4 / 6',
           consistencyMonth: '17 / 24'
-        });
+        };
+        setData(defaultData);
+        // Optionally, create the document with default data
+        setDoc(progressDocRef, defaultData);
       }
       setIsLoading(false);
     }, (error) => {
@@ -199,6 +257,15 @@ export default function ProgressPage() {
       deadliftPR: newPRs.deadlift,
     }, { merge: true });
   };
+
+  const handleSaveVolume = async (newVolume: { volume: string; change: string }) => {
+    if (!progressDocRef) return;
+    await setDoc(progressDocRef, {
+      weeklyVolume: newVolume.volume,
+      weeklyChange: newVolume.change,
+    }, { merge: true });
+  };
+
 
   if (isLoading) {
     return (
@@ -238,7 +305,13 @@ export default function ProgressPage() {
 
         {/* VOLUME CARD */}
         <div className="relative bg-[#111111] border border-neutral-800 p-5 rounded-2xl shadow-lg">
-           <EditMetricDialog metricKey="weeklyVolume" label="Weekly Volume" currentValue={data.weeklyVolume || ''} onSave={handleSaveMetric} />
+           <EditVolumeDialog
+            currentValues={{
+              volume: data.weeklyVolume || '',
+              change: data.weeklyChange || '',
+            }}
+            onSave={handleSaveVolume}
+          />
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold">Weekly Volume</h2>
             <BarChart className="w-5 h-5 text-neutral-400" />
