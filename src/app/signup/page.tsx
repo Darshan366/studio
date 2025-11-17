@@ -95,7 +95,7 @@ export default function SignupPage() {
         fitnessLevel: data.fitnessLevel,
         bio: data.bio || '',
         createdAt: serverTimestamp(),
-      }, { merge: true });
+      });
 
       await user.reload();
       // The AuthLayout will handle redirecting the user to the home page
@@ -136,7 +136,7 @@ export default function SignupPage() {
           fitnessLevel: 'Beginner', // Default value
           bio: '', // Default value
           createdAt: serverTimestamp(),
-        }, { merge: true });
+        });
         toast({
           title: 'Account Created!',
           description: "Welcome to GymFlow! We're glad to have you.",

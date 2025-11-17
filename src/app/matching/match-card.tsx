@@ -17,6 +17,8 @@ import {
   getDocs,
   limit,
   serverTimestamp,
+  Query,
+  DocumentData,
 } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/types/user';
@@ -36,29 +38,46 @@ export default function MatchCard() {
 
   const { data: matches } = useCollection(matchesQuery);
 
-  const matchedUserIds = useMemo(() => {
-    const ids = new Set([user?.uid]); // Start with current user's ID
+  const seenAndMatchedUserIds = useMemo(() => {
+    const ids = new Set([user?.uid]);
     if (matches) {
       matches.forEach(match => {
         match.users.forEach((id: string) => ids.add(id));
       });
     }
-    return ids;
+    // In a full implementation, you'd also add users you've swiped left on.
+    // For this example, we only exclude matched users.
+    return Array.from(ids);
   }, [matches, user]);
 
   const potentialMatchesQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    // Query for users that are not the current user
-    return query(collection(firestore, 'users'), where('uid', '!=', user.uid));
-  }, [firestore, user]);
+    if (!firestore || !user || seenAndMatchedUserIds.length === 0) return null;
+    
+    // We can only use 10 items in a 'not-in' query.
+    // If there are more, we need to fetch all and filter client-side.
+    // For a production app, a more sophisticated backend-driven approach would be better.
+    if (seenAndMatchedUserIds.length > 10) {
+        return query(collection(firestore, 'users'), where('uid', '!=', user.uid));
+    }
 
-  const { data: profiles, isLoading: isLoadingProfiles, error: profilesError } = useCollection<UserProfile>(potentialMatchesQuery);
+    return query(
+        collection(firestore, 'users'), 
+        where('uid', 'not-in', seenAndMatchedUserIds)
+    );
+  }, [firestore, user, seenAndMatchedUserIds]);
 
+  const { data: profiles, isLoading: isLoadingProfiles, error: profilesError } = useCollection<UserProfile>(potentialMatchesQuery as Query<DocumentData> | null);
+  
   const filteredProfiles = useMemo(() => {
       if (!profiles) return [];
-      // Further filter out users who are already matched
-      return profiles.filter(p => !matchedUserIds.has(p.uid));
-  }, [profiles, matchedUserIds]);
+      // If we had to fetch all users because of the 'not-in' limit, we filter here.
+      if (seenAndMatchedUserIds.length > 10) {
+        const seenSet = new Set(seenAndMatchedUserIds);
+        return profiles.filter(p => !seenSet.has(p.uid));
+      }
+      return profiles;
+  }, [profiles, seenAndMatchedUserIds]);
+
 
   useEffect(() => {
       if(profilesError) {

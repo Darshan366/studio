@@ -104,7 +104,7 @@ export default function LoginPage() {
           fitnessLevel: 'Beginner', // Default value
           bio: '', // Default value
           createdAt: serverTimestamp(),
-        }, { merge: true });
+        });
         toast({
           title: 'Account Created!',
           description: "Welcome to GymFlow! We're glad to have you.",

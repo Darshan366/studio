@@ -31,7 +31,7 @@ import Link from 'next/link';
 import WeeklyProgressChart from '@/components/weekly-progress-chart';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useWorkouts } from '@/context/WorkoutContext';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { doc } from 'firebase/firestore';
 
 type ProgressData = {
@@ -57,12 +57,15 @@ export default function DashboardPage() {
 
   const { data: progressData } = useDoc<ProgressData>(progressDocRef);
 
-  const [todaysWorkout, setTodaysWorkout] = useState({
-      day: 'Rest Day',
-      workout: 'No workout scheduled',
-      progress: 0,
-      exercises: [],
-  });
+  const todaysWorkout = useMemo(() => {
+    const dayOfWeek = new Date().toLocaleString('en-US', { weekday: 'long' });
+    return workouts.find(w => w.day === dayOfWeek) || {
+        day: 'Rest Day',
+        workout: 'No workout scheduled',
+        progress: 0,
+        exercises: [],
+    };
+  }, [workouts]);
 
   const quickStats = [
     {
@@ -104,17 +107,6 @@ export default function DashboardPage() {
       icon: Repeat
     }
   ];
-
-  useEffect(() => {
-    const dayOfWeek = new Date().toLocaleString('en-US', { weekday: 'long' });
-    const workoutForToday = workouts.find(w => w.day === dayOfWeek) || {
-        day: 'Rest Day',
-        workout: 'No workout scheduled',
-        progress: 0,
-        exercises: [],
-    };
-    setTodaysWorkout(workoutForToday);
-  }, [workouts]);
 
 
   // We don't have a 'done' state in the schedule data, so we'll simulate it for now.
