@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { Heart, X, Loader2, MapPin } from 'lucide-react';
-import { useUser, useFirestore, useMemoFirebase, useCollection, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import {
   collection,
   writeBatch,
@@ -17,8 +17,6 @@ import {
   getDocs,
   limit,
   serverTimestamp,
-  Query,
-  DocumentData,
 } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/types/user';
@@ -28,66 +26,38 @@ export default function MatchCard() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
+  const [profiles, setProfiles] = useState<UserProfile[]>([]);
+  const [isLoadingProfiles, setIsLoadingProfiles] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
-  
-  const matchesQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    return query(collection(firestore, 'matches'), where('users', 'array-contains', user.uid));
-  }, [user, firestore]);
-
-  const { data: matches } = useCollection(matchesQuery);
-
-  const seenAndMatchedUserIds = useMemo(() => {
-    const ids = new Set([user?.uid]);
-    if (matches) {
-      matches.forEach(match => {
-        match.users.forEach((id: string) => ids.add(id));
-      });
-    }
-    // In a full implementation, you'd also add users you've swiped left on.
-    // For this example, we only exclude matched users.
-    return Array.from(ids);
-  }, [matches, user]);
-
-  const potentialMatchesQuery = useMemoFirebase(() => {
-    if (!firestore || !user || seenAndMatchedUserIds.length === 0) return null;
-    
-    // We can only use 10 items in a 'not-in' query.
-    // If there are more, we need to fetch all and filter client-side.
-    // For a production app, a more sophisticated backend-driven approach would be better.
-    if (seenAndMatchedUserIds.length > 10) {
-        return query(collection(firestore, 'users'), where('uid', '!=', user.uid));
-    }
-
-    return query(
-        collection(firestore, 'users'), 
-        where('uid', 'not-in', seenAndMatchedUserIds)
-    );
-  }, [firestore, user, seenAndMatchedUserIds]);
-
-  const { data: profiles, isLoading: isLoadingProfiles, error: profilesError } = useCollection<UserProfile>(potentialMatchesQuery as Query<DocumentData> | null);
-  
-  const filteredProfiles = useMemo(() => {
-      if (!profiles) return [];
-      // If we had to fetch all users because of the 'not-in' limit, we filter here.
-      if (seenAndMatchedUserIds.length > 10) {
-        const seenSet = new Set(seenAndMatchedUserIds);
-        return profiles.filter(p => !seenSet.has(p.uid));
-      }
-      return profiles;
-  }, [profiles, seenAndMatchedUserIds]);
-
 
   useEffect(() => {
-      if(profilesError) {
-          toast({
-              variant: 'destructive',
-              title: 'Error Loading Matches',
-              description: profilesError.message || 'There was a problem loading potential matches.',
-          });
+    if (!user) return;
+
+    const fetchMatches = async () => {
+      try {
+        setIsLoadingProfiles(true);
+        const res = await fetch('/api/match');
+        if (!res.ok) {
+          throw new Error('Failed to fetch matches');
+        }
+        const data = await res.json();
+        setProfiles(data.profiles);
+      } catch (error) {
+        console.error(error);
+        toast({
+          variant: 'destructive',
+          title: 'Error Loading Matches',
+          description: 'There was a problem loading potential matches.',
+        });
+      } finally {
+        setIsLoadingProfiles(false);
       }
-  }, [profilesError, toast]);
+    };
+
+    fetchMatches();
+  }, [user, toast]);
+
 
   const checkForMatch = async (targetUserId: string) => {
     if (!user || !firestore) return;
@@ -104,9 +74,9 @@ export default function MatchCard() {
   };
 
   const handleSwipe = async (direction: 'left' | 'right') => {
-    if (!user || !firestore || filteredProfiles.length === 0) return;
+    if (!user || !firestore || profiles.length === 0) return;
 
-    const targetUser = filteredProfiles[currentIndex];
+    const targetUser = profiles[currentIndex];
     if (!targetUser) return;
     
     setIsSwiping(true);
@@ -195,7 +165,7 @@ export default function MatchCard() {
     )
   }
 
-  if (filteredProfiles.length === 0 || currentIndex >= filteredProfiles.length) {
+  if (profiles.length === 0 || currentIndex >= profiles.length) {
     return (
       <Card className="flex h-[500px] items-center justify-center">
         <CardContent className="text-center">
@@ -206,7 +176,7 @@ export default function MatchCard() {
     );
   }
 
-  const currentProfile = filteredProfiles[currentIndex];
+  const currentProfile = profiles[currentIndex];
 
   return (
     <div className="relative">
@@ -260,3 +230,5 @@ export default function MatchCard() {
     </div>
   );
 }
+
+    

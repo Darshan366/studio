@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -29,6 +30,8 @@ const profileFormSchema = z.object({
     name: z.string().min(2, { message: "Name must be at least 2 characters." }),
     bio: z.string().max(160, { message: "Bio cannot be longer than 160 characters." }).optional(),
     fitnessLevel: z.enum(['Beginner', 'Intermediate', 'Advanced']).optional(),
+    city: z.string().optional(),
+    gymAddress: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -46,6 +49,8 @@ function EditProfileForm() {
             name: '',
             bio: '',
             fitnessLevel: 'Beginner',
+            city: '',
+            gymAddress: '',
         }
     });
 
@@ -54,7 +59,9 @@ function EditProfileForm() {
             form.reset({
                 name: user.displayName || '',
                 bio: '', 
-                fitnessLevel: 'Beginner', 
+                fitnessLevel: 'Beginner',
+                city: '',
+                gymAddress: '',
             });
         }
     }, [user, firestore, form]);
@@ -69,10 +76,17 @@ function EditProfileForm() {
             }
             
             const userDocRef = doc(firestore, 'users', user.uid);
+            
+            // In a real app, geocode the address to get lat/lon
+            const placeholderCoords = { latitude: 34.0522, longitude: -118.2437 };
+
             updateDocumentNonBlocking(userDocRef, {
                 name: data.name,
                 bio: data.bio,
                 fitnessLevel: data.fitnessLevel,
+                city: data.city,
+                gymAddress: data.gymAddress,
+                gymCoordinates: placeholderCoords, // Add real geocoding in production
             });
 
             toast({
@@ -90,29 +104,6 @@ function EditProfileForm() {
             setIsSubmitting(false);
         }
     }
-
-    const handleSetGymLocation = () => {
-        if (!user || !firestore) return;
-        
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(async (position) => {
-                const { latitude, longitude } = position.coords;
-                const userDocRef = doc(firestore, 'users', user.uid);
-                await updateDoc(userDocRef, { gymLocation: { latitude, longitude } });
-                toast({ title: "✅ Gym location saved successfully." });
-            }, (error) => {
-                 toast({
-                    variant: 'destructive',
-                    title: "⚠️ Location Error",
-                    description: error.code === error.PERMISSION_DENIED
-                        ? "Location permission denied. Please enable it in your browser settings."
-                        : "Could not get your location."
-                });
-            });
-        } else {
-            toast({ variant: 'destructive', title: "Geolocation is not supported by this browser." });
-        }
-    };
 
 
     return (
@@ -168,12 +159,34 @@ function EditProfileForm() {
                             </FormItem>
                         )}
                     />
-                     <div className="space-y-2">
-                        <Label className="flex items-center gap-2 text-muted-foreground"><MapPin size={14}/> Gym Location</Label>
-                        <Button type="button" variant="outline" onClick={handleSetGymLocation} className="w-full bg-muted/40 border-border/30 hover:bg-muted/80">
-                           Set Gym Location
-                        </Button>
-                     </div>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="gymAddress"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="flex items-center gap-2 text-muted-foreground"><MapPin size={14}/> Gym Address</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g., 123 Fitness St" {...field} className="bg-muted/40 border-border/30 focus:bg-background/60 transition-all"/>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="city"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="flex items-center gap-2 text-muted-foreground"><MapPin size={14}/> City</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g., Los Angeles" {...field} className="bg-muted/40 border-border/30 focus:bg-background/60 transition-all"/>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
 
                     <div>
                         <Button type="submit" disabled={isSubmitting || isUserLoading} className="w-full bg-primary/90 hover:bg-primary text-primary-foreground font-semibold shadow-md transition-all hover:shadow-primary/40 animate-pulse-slow hover:animate-none">
@@ -366,3 +379,5 @@ export default function SettingsPage() {
         </div>
     )
 }
+
+    

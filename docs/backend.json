@@ -24,6 +24,7 @@
             "longitude": { "type": "number" }
           }
         },
+        "city": { "type": "string", "description": "The user's city for location-based matching." },
         "usualGymTime": {
             "type": "object",
             "description": "The user's usual workout time window.",

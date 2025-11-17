@@ -12,6 +12,7 @@ export interface UserProfile {
     latitude: number;
     longitude: number;
   };
+  city?: string;
   usualGymTime?: {
       start: string; // HH:MM
       end: string; // HH:MM
@@ -22,3 +23,5 @@ export interface UserProfile {
   streakCount?: number;
   lastCheckInDate?: string;
 }
+
+    
