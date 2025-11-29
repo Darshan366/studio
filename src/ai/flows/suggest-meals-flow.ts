@@ -52,6 +52,8 @@ const suggestMealsFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await prompt(input);
+    // If the output is null or undefined, return a default empty response
+    // to prevent the API route from crashing.
     if (!output) {
       return { suggestions: [] };
     }
