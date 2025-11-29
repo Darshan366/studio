@@ -57,7 +57,7 @@ function EditProfileForm() {
             fitnessLevel: 'Beginner',
             city: '',
             gymAddress: '',
-            weight: undefined,
+            weight: '' as any, // Initialize with empty string to make it a controlled component
             gender: 'Prefer not to say',
         }
     });
@@ -70,7 +70,7 @@ function EditProfileForm() {
                 fitnessLevel: userProfile.fitnessLevel || 'Beginner',
                 city: userProfile.city || '',
                 gymAddress: userProfile.gymAddress || '',
-                weight: userProfile.weight || undefined,
+                weight: userProfile.weight || '' as any,
                 gender: userProfile.gender || 'Prefer not to say',
             });
         }
@@ -175,7 +175,7 @@ function EditProfileForm() {
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel className="flex items-center gap-2 text-muted-foreground"><VenetianMask size={14}/> Gender</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl>
                                         <SelectTrigger className="bg-muted/40 border-border/30 focus:bg-background/60 transition-all">
                                             <SelectValue placeholder="Select gender" />
@@ -199,7 +199,7 @@ function EditProfileForm() {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel className="flex items-center gap-2 text-muted-foreground"><Dumbbell size={14}/> Fitness Level</FormLabel>
-                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                 <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
                                     <SelectTrigger className="bg-muted/40 border-border/30 focus:bg-background/60 transition-all">
                                         <SelectValue placeholder="Select your fitness level" />
@@ -223,7 +223,7 @@ function EditProfileForm() {
                                 <FormItem>
                                     <FormLabel className="flex items-center gap-2 text-muted-foreground"><MapPin size={14}/> Gym Address</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="e.g., 123 Fitness St" {...field} className="bg-muted/40 border-border/30 focus:bg-background/60 transition-all"/>
+                                        <Input placeholder="e.g., 123 Fitness St" {...field} value={field.value || ''} className="bg-muted/40 border-border/30 focus:bg-background/60 transition-all"/>
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -236,7 +236,7 @@ function EditProfileForm() {
                                 <FormItem>
                                     <FormLabel className="flex items-center gap-2 text-muted-foreground"><MapPin size={14}/> City</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="e.g., Los Angeles" {...field} className="bg-muted/40 border-border/30 focus:bg-background/60 transition-all"/>
+                                        <Input placeholder="e.g., Los Angeles" {...field} value={field.value || ''} className="bg-muted/40 border-border/30 focus:bg-background/60 transition-all"/>
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

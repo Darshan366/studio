@@ -71,7 +71,7 @@ export default function SignupPage() {
       password: '',
       fitnessLevel: 'Beginner',
       bio: '',
-      weight: undefined,
+      weight: '' as any, // Initialize with empty string to make it a controlled component
       gender: 'Prefer not to say',
     },
   });
