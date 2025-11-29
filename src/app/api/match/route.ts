@@ -6,10 +6,7 @@ import { firebaseConfig } from '@/firebase/config';
 import { getAuth } from 'firebase/auth';
 import type { UserProfile } from '@/types/user';
 
-// Initialize Firebase Admin App
-// Note: In a real server environment, you'd use Admin SDK.
-// For Next.js API routes, client SDK with a server-like mindset is okay for simplicity
-// if rules are properly configured.
+// Initialize Firebase App
 if (!getApps().length) {
   initializeApp(firebaseConfig);
 }
@@ -32,18 +29,12 @@ const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => 
 };
 
 export async function GET(req: Request) {
-    // In a real app, you'd get the current user ID from a verified session/token
-    // For this example, we'll assume a way to get the user ID, maybe from headers or a POST body
-    // This is NOT secure for production without proper auth checks.
     const authHeader = req.headers.get('Authorization');
-    const currentUserId = authHeader?.split('Bearer ')[1]; // Placeholder for auth
+    const currentUserId = authHeader?.split('Bearer ')[1]; 
 
     if (!currentUserId) {
-        // This is a simplified auth check. Use NextAuth.js or similar for production.
-        // Can't get user from client-side `useUser` hook here.
-        // We will proceed without a user for now, which means we can't filter the current user out.
-        // This is a limitation of this simplified example.
-        console.warn("No user ID found, returning all users.");
+        console.warn("No user ID found, returning empty profiles.");
+        return NextResponse.json({ profiles: [] });
     }
     
     try {
@@ -53,13 +44,27 @@ export async function GET(req: Request) {
         
         const currentUser = allUsers.find(u => u.uid === currentUserId);
         
+        // --- START: Fetch existing matches to exclude them ---
+        const matchesQuery = query(collection(db, 'matches'), where('users', 'array-contains', currentUserId));
+        const matchesSnap = await getDocs(matchesQuery);
+        const matchedUserIds = new Set<string>(matchesSnap.docs.map(doc => {
+            const users = doc.data().users as string[];
+            return users.find(uid => uid !== currentUserId)!;
+        }));
+        // --- END: Fetch existing matches ---
+
         if (!currentUser) {
             // Can't do matching without the current user's location info
-            return NextResponse.json({ profiles: allUsers.filter(u => u.uid !== currentUserId) });
+            return NextResponse.json({ profiles: allUsers.filter(u => u.uid !== currentUserId && !matchedUserIds.has(u.uid)) });
         }
 
-        const seenUserIds = new Set<string>([currentUserId]);
-        // In a real app, also fetch and add swiped-left users to `seenUserIds`
+        const seenUserIds = new Set<string>([currentUserId, ...matchedUserIds]);
+        // Also fetch and add swiped-left users to `seenUserIds` for better filtering
+        const swipesQuery = query(collection(db, 'swipes'), where('swiperId', '==', currentUserId));
+        const swipesSnap = await getDocs(swipesQuery);
+        swipesSnap.docs.forEach(doc => {
+            seenUserIds.add(doc.data().targetId);
+        });
 
         const sameGym: UserProfile[] = [];
         const nearby: UserProfile[] = [];
@@ -96,15 +101,11 @@ export async function GET(req: Request) {
             }
         });
 
-        // Add sorting for relevancy within groups if needed
-        // e.g., sameGym.sort((a, b) => sortByRelevance(a, b));
-
         const sortedProfiles = [...sameGym, ...nearby, ...sameCity];
 
-        // Ensure no duplicates
-        const finalProfiles = Array.from(new Set(sortedProfiles.map(p => p.uid)))
-            .map(uid => sortedProfiles.find(p => p.uid === uid)!);
-
+        // Ensure no duplicates and user is not already seen
+        const finalProfiles = sortedProfiles.filter(p => !seenUserIds.has(p.uid));
+        
         return NextResponse.json({ profiles: finalProfiles });
 
     } catch (error) {
@@ -112,5 +113,3 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
-
-    

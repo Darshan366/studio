@@ -37,7 +37,13 @@ export default function MatchCard() {
     const fetchMatches = async () => {
       try {
         setIsLoadingProfiles(true);
-        const res = await fetch('/api/match');
+        // Pass user's ID token for authentication on the backend
+        const token = await user.getIdToken();
+        const res = await fetch('/api/match', {
+            headers: {
+                'Authorization': `Bearer ${user.uid}`
+            }
+        });
         if (!res.ok) {
           throw new Error('Failed to fetch matches');
         }
@@ -230,5 +236,3 @@ export default function MatchCard() {
     </div>
   );
 }
-
-    
