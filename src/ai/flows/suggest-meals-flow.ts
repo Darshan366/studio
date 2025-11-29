@@ -3,7 +3,7 @@
  * @fileOverview A meal suggestion AI flow.
  *
  * This file defines a Genkit flow that suggests meals based on a user's
- * profile and a given prompt.
+ * profile, a given prompt, and a predefined list of meals.
  *
  * - suggestMeals - A function that handles the meal suggestion process.
  * - SuggestMealsInput - The input type for the suggestMeals function.
@@ -12,19 +12,17 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase';
 import type { UserProfile } from '@/types/user';
-
+import { allMeals, Meal } from '@/lib/meal-data';
 
 const SuggestMealsInputSchema = z.object({
   prompt: z.string().describe('The user\'s request for meal suggestions, e.g., "Suggest meals for Monday".'),
-  userId: z.string().describe("The user's unique ID to fetch their profile data."),
+  userProfile: z.custom<UserProfile>(),
 });
 export type SuggestMealsInput = z.infer<typeof SuggestMealsInputSchema>;
 
 const SuggestMealsOutputSchema = z.object({
-  suggestions: z.array(z.string()).describe('A list of 4-6 meal suggestions.'),
+  suggestions: z.array(z.string()).describe('A list of 4-6 meal suggestions based on the user profile.'),
 });
 export type SuggestMealsOutput = z.infer<typeof SuggestMealsOutputSchema>;
 
@@ -39,17 +37,24 @@ const mealSuggestionPrompt = ai.definePrompt({
   input: {
     schema: z.object({
         prompt: z.string(),
-        userProfile: z.any().describe('A JSON object representing the user\'s profile, including fitness goals, preferences, etc.')
+        userProfile: z.any().describe('A JSON object representing the user\'s profile, including fitness goals, preferences, etc.'),
+        mealList: z.any().describe('A JSON object of available meals to choose from.')
     })
   },
   output: { schema: SuggestMealsOutputSchema },
   prompt: `You are an expert nutritionist designing a meal plan for a user.
 
-Analyze the user's profile: {{jsonStringify userProfile}}
+Your task is to select 4 to 6 meal suggestions from the provided meal list that best fit the user's profile and their request.
 
-Based on their profile and their request, suggest 4 to 6 meals.
+Analyze the user's profile:
+- Fitness Goal: {{userProfile.fitnessGoal}}
+- Dietary Preference: {{userProfile.dietaryPreference}}
+
+Here is the list of available meals you can choose from: {{jsonStringify mealList}}
 
 User's request: "{{prompt}}"
+
+Based on their profile and request, select the most appropriate meals.
 
 Return ONLY the list of meal names in the 'suggestions' array. Do not include meal times like "Breakfast:". Just the meal name.`,
 });
@@ -61,23 +66,24 @@ const suggestMealsFlow = ai.defineFlow(
     inputSchema: SuggestMealsInputSchema,
     outputSchema: SuggestMealsOutputSchema,
   },
-  async (input) => {
-    // In a real Genkit flow, you'd initialize this once.
-    const { firestore } = initializeFirebase();
+  async ({ userProfile, prompt }) => {
     
-    // Fetch the user's profile from Firestore
-    const userDocRef = doc(firestore, 'users', input.userId);
-    const userDocSnap = await getDoc(userDocRef);
+    // Filter meals based on dietary preference
+    const filteredMeals = allMeals.filter(meal => {
+        if (userProfile.dietaryPreference === 'Vegetarian') {
+            return meal.type === 'vegetarian' || meal.type === 'vegan';
+        }
+        if (userProfile.dietaryPreference === 'Vegan') {
+            return meal.type === 'vegan';
+        }
+        return true; // 'Anything'
+    });
 
-    if (!userDocSnap.exists()) {
-        throw new Error('User profile not found.');
-    }
-    const userProfile = userDocSnap.data() as UserProfile;
-
-    // Call the prompt with the user's profile and the original prompt
+    // Call the prompt with the user's profile, the prompt, and the filtered meal list
     const { output } = await mealSuggestionPrompt({
-        prompt: input.prompt,
-        userProfile: userProfile
+        prompt: prompt,
+        userProfile: userProfile,
+        mealList: filteredMeals
     });
 
     return output!;
