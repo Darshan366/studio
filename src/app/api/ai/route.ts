@@ -1,42 +1,46 @@
 
-import { NextResponse } from "next/server";
-import axios from 'axios';
+'use server';
+
+import { NextResponse } from 'next/server';
+import { ai } from '@/ai/genkit';
 
 export async function POST(req: Request) {
   try {
     const { prompt } = await req.json();
 
-    if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0) {
-      return NextResponse.json({ error: "prompt required" }, { status: 400 });
+    if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
+      return NextResponse.json({ error: 'prompt required' }, { status: 400 });
     }
+    
+    // Use the modern Genkit AI SDK to generate content
+    const response = await ai.generate({
+      prompt: prompt,
+    });
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.error("GEMINI_API_KEY not configured.");
-      return NextResponse.json({ error: "The AI service is not configured correctly. Please check server logs." }, { status: 500 });
+    const reply = response.text;
+    
+    if (!reply) {
+      return NextResponse.json(
+        { error: 'Sorry, I couldn’t generate a response at this time.' },
+        { status: 500 }
+      );
     }
-
-    const geminiResponse = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
-      {
-        contents: [{ parts: [{ text: prompt }]}]
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    const reply =
-      geminiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "Sorry, I couldn’t generate a response at this time.";
-
 
     return NextResponse.json({ reply });
-
   } catch (err: any) {
-    console.error("Error in /api/ai:", err.response ? err.response.data : err.message);
-    return NextResponse.json({ error: "Internal server error while contacting AI service." }, { status: 500 });
+    console.error('Error in /api/ai:', err);
+
+    // Provide a more specific error message if the API key is missing
+    if (err.message && err.message.includes('API key')) {
+      return NextResponse.json(
+        { error: 'The AI service is not configured. Please add your GEMINI_API_KEY to your environment variables.' },
+        { status: 500 }
+      );
+    }
+    
+    return NextResponse.json(
+      { error: 'Internal server error while contacting AI service.' },
+      { status: 500 }
+    );
   }
 }
