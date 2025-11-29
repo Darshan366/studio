@@ -24,4 +24,6 @@ export interface UserProfile {
   lastCheckInDate?: string;
   weight?: number;
   gender?: 'Male' | 'Female' | 'Other' | 'Prefer not to say';
+  dietaryPreference?: 'Anything' | 'Vegetarian' | 'Vegan';
+  fitnessGoal?: 'Fat Loss' | 'Muscle Gain' | 'Maintenance';
 }
