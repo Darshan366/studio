@@ -3,6 +3,15 @@ import { suggestMeals } from '@/ai/flows/suggest-meals-flow';
 
 export async function POST(req: Request) {
   try {
+    // Check if the API key is available before processing the request.
+    if (!process.env.GEMINI_API_KEY) {
+      console.error('GEMINI_API_KEY is not set.');
+      return NextResponse.json(
+        { error: 'Server not configured: Missing API key. Please set the GEMINI_API_KEY in your .env file.' },
+        { status: 500 }
+      );
+    }
+    
     const body = await req.json();
     const { userProfile, day } = body;
 
@@ -11,12 +20,6 @@ export async function POST(req: Request) {
         { error: 'Missing userProfile or day' },
         { status: 400 }
       );
-    }
-    
-    // Check if the API key is available.
-    if (!process.env.GEMINI_API_KEY) {
-        console.error('GEMINI_API_KEY is not set.');
-        return NextResponse.json({ error: 'Server not configured: Missing API key.' }, { status: 500 });
     }
 
     const result = await suggestMeals({ userProfile, day });
