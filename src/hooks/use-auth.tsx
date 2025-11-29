@@ -21,19 +21,24 @@ export const AuthLayout = ({ children }: { children: ReactNode }) => {
   
   const isAuthPage = pathname === '/login' || pathname === '/signup';
   const isMarketingPage = pathname === '/';
+  const isOnboardingPage = pathname === '/onboarding';
+
 
   useEffect(() => {
     if (isUserLoading) return;
 
-    // If user is logged in, and they are on a marketing/auth page, redirect to dashboard
-    if (user && (isAuthPage || isMarketingPage)) {
-      router.push('/dashboard');
-    } 
-    // If user is not logged in and not on a public page, redirect to landing
-    else if (!user && !isAuthPage && !isMarketingPage) {
-      router.push('/');
+    if (user) {
+        // If user is logged in, and they are on a marketing/auth page, redirect to dashboard
+        if (isAuthPage || isMarketingPage) {
+            router.push('/dashboard');
+        }
+    } else {
+        // If user is not logged in and not on a public/auth page, redirect to landing
+        if (!isAuthPage && !isMarketingPage && !isOnboardingPage) {
+            router.push('/');
+        }
     }
-  }, [user, isUserLoading, isAuthPage, isMarketingPage, router, pathname]);
+  }, [user, isUserLoading, isAuthPage, isMarketingPage, isOnboardingPage, router, pathname]);
 
   if (isUserLoading) {
     return (
@@ -43,31 +48,36 @@ export const AuthLayout = ({ children }: { children: ReactNode }) => {
     );
   }
 
-  // Render auth pages or landing page without the main app layout
-  if (!user || isAuthPage || isMarketingPage) {
-    // If we're on a protected route but the user is null (e.g., during logout), show a loader.
-    if (!isAuthPage && !isMarketingPage) {
-       return (
-          <div className="flex min-h-screen items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
-        );
-    }
+  // Render pages that don't need the main app layout
+  if (!user && (isAuthPage || isMarketingPage)) {
     return <>{children}</>;
   }
 
+  // Render onboarding page without layout as well, but only if user is logged in
+  if (user && isOnboardingPage) {
+    return <>{children}</>;
+  }
 
-  // Render the main app layout for authenticated users
+  // If user is logged in and not on onboarding, show the main app layout
+  if (user && !isOnboardingPage) {
+    return (
+        <SidebarProvider defaultOpen>
+          <Sidebar collapsible="icon" variant="sidebar" side="left">
+            <AppSidebar />
+            <SidebarRail />
+          </Sidebar>
+          <SidebarInset>
+            <AppHeader />
+            <main className="flex-1 p-4 lg:p-6">{children}</main>
+          </SidebarInset>
+        </SidebarProvider>
+    );
+  }
+  
+  // Fallback for edge cases, e.g. non-logged-in user on a protected route momentarily
   return (
-      <SidebarProvider defaultOpen>
-        <Sidebar collapsible="icon" variant="sidebar" side="left">
-          <AppSidebar />
-          <SidebarRail />
-        </Sidebar>
-        <SidebarInset>
-          <AppHeader />
-          <main className="flex-1 p-4 lg:p-6">{children}</main>
-        </SidebarInset>
-      </SidebarProvider>
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
   );
 };

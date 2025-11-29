@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -71,7 +70,7 @@ export default function SignupPage() {
       password: '',
       fitnessLevel: 'Beginner',
       bio: '',
-      weight: '' as any, // Initialize with empty string to make it a controlled component
+      weight: '' as any,
       gender: 'Prefer not to say',
     },
   });
@@ -104,7 +103,7 @@ export default function SignupPage() {
       });
 
       await user.reload();
-      // The AuthLayout will handle redirecting the user to the home page
+      // The AuthLayout will handle redirecting the user to the dashboard
     } catch (error) {
        let description = 'An unexpected error occurred. Please try again.';
        if (error instanceof FirebaseError) {
@@ -132,29 +131,24 @@ export default function SignupPage() {
       const additionalInfo = getAdditionalUserInfo(result);
 
       if (additionalInfo?.isNewUser) {
-        // Create a new document in Firestore for new users
+        // Create a basic user document in Firestore for new users
         const userDocRef = doc(firestore, 'users', user.uid);
         await setDoc(userDocRef, {
           uid: user.uid,
           name: user.displayName,
           email: user.email,
           photoURL: user.photoURL,
-          fitnessLevel: 'Beginner', // Default value
-          bio: '', // Default value
-          weight: null,
-          gender: 'Prefer not to say',
           createdAt: serverTimestamp(),
         });
-        toast({
-          title: 'Account Created!',
-          description: "Welcome to GymFlow! We're glad to have you.",
-        });
+        // Redirect to onboarding page to collect more info
+        router.push('/onboarding');
       }
-      // AuthLayout will handle the redirect
+      // For existing users, AuthLayout will handle the redirect
     } catch (error) {
       if (error instanceof FirebaseError) {
         if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
           // User cancelled the popup, so we do nothing.
+          setIsGoogleLoading(false);
           return;
         }
         if (error.code === 'auth/account-exists-with-different-credential') {
@@ -172,8 +166,7 @@ export default function SignupPage() {
             description: 'Could not sign in with Google. Please try again.',
         });
       }
-    } finally {
-        setIsGoogleLoading(false);
+      setIsGoogleLoading(false);
     }
   };
 
@@ -253,7 +246,7 @@ export default function SignupPage() {
                     <FormItem>
                         <FormLabel>Weight (kg)</FormLabel>
                         <FormControl>
-                        <Input type="number" placeholder="70" {...field} />
+                        <Input type="number" placeholder="70" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>

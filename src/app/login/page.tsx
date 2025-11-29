@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -94,27 +93,24 @@ export default function LoginPage() {
       const additionalInfo = getAdditionalUserInfo(result);
 
       if (additionalInfo?.isNewUser) {
-        // Create a new document in Firestore for new users
+        // Create a basic user document in Firestore for new users
         const userDocRef = doc(firestore, 'users', user.uid);
         await setDoc(userDocRef, {
           uid: user.uid,
           name: user.displayName,
           email: user.email,
           photoURL: user.photoURL,
-          fitnessLevel: 'Beginner', // Default value
-          bio: '', // Default value
           createdAt: serverTimestamp(),
         });
-        toast({
-          title: 'Account Created!',
-          description: "Welcome to GymFlow! We're glad to have you.",
-        });
+        // Redirect to onboarding page to collect more info
+        router.push('/onboarding');
       }
-      // AuthLayout will handle the redirect
+      // For existing users, AuthLayout will handle the redirect
     } catch (error) {
        if (error instanceof FirebaseError) {
           if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
             // User cancelled the popup, so we do nothing.
+            setIsGoogleLoading(false);
             return;
           }
           if (error.code === 'auth/account-exists-with-different-credential') {
@@ -132,9 +128,9 @@ export default function LoginPage() {
             description: 'Could not sign in with Google. Please try again.',
         });
        }
-    } finally {
-        setIsGoogleLoading(false);
+       setIsGoogleLoading(false);
     }
+    // No need for finally block to set loading state, it's handled in catch/success paths
   };
 
 
