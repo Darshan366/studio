@@ -1,5 +1,6 @@
 
 import { NextResponse } from "next/server";
+import axios from 'axios';
 
 export async function POST(req: Request) {
   try {
@@ -9,30 +10,33 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "prompt required" }, { status: 400 });
     }
 
-    const functionUrl = process.env.NEXT_PUBLIC_FIREBASE_AI_URL;
-    if (!functionUrl) {
-        console.error("Firebase AI function URL not configured.");
-        // Use a more specific status code to indicate the feature is not configured.
-        return NextResponse.json({ error: "Server not configured" }, { status: 501 });
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.error("GEMINI_API_KEY not configured.");
+      return NextResponse.json({ error: "The AI service is not configured correctly. Please check server logs." }, { status: 500 });
     }
 
-    const response = await fetch(functionUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt })
-    });
+    const geminiResponse = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
+      {
+        contents: [{ parts: [{ text: prompt }]}]
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
 
-    if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Error from Firebase Function:", errorData);
-        return NextResponse.json({ error: "AI backend error", detail: errorData }, { status: response.status });
-    }
+    const reply =
+      geminiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "Sorry, I couldn’t generate a response at this time.";
 
-    const data = await response.json();
-    return NextResponse.json({ output: data.reply });
 
-  } catch (err) {
-    console.error("Error in /api/ai:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ reply });
+
+  } catch (err: any) {
+    console.error("Error in /api/ai:", err.response ? err.response.data : err.message);
+    return NextResponse.json({ error: "Internal server error while contacting AI service." }, { status: 500 });
   }
 }

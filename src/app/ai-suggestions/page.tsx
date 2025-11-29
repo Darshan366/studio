@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, Bot } from "lucide-react";
 
 export default function AISuggestionsPage() {
   const [input, setInput] = useState("");
@@ -27,13 +27,10 @@ export default function AISuggestionsPage() {
         const data = await res.json();
 
         if (!res.ok) {
-            if (res.status === 501) { // 501 for Not Implemented (or not configured)
-                throw new Error("501");
-            }
             throw new Error(data.error || "An unknown error occurred.");
         }
         
-        setResponse(data.output);
+        setResponse(data.reply);
 
     } catch (err: any) {
         console.error("Error fetching AI response:", err);
@@ -53,15 +50,12 @@ export default function AISuggestionsPage() {
   return (
     <div className="w-full h-full flex flex-col items-center justify-center text-white px-4 pt-10">
       
-      {/* TOP ICON */}
       <div className="text-4xl mb-4">✨</div>
 
-      {/* TITLE */}
       <h1 className="text-2xl font-semibold mb-8 text-center">
         What can I help you with today?
       </h1>
 
-      {/* TEXTBOX CONTAINER */}
       <div className="w-full max-w-3xl bg-[#1A1A1A] rounded-2xl p-5 border border-neutral-700 shadow-xl relative">
 
         <textarea
@@ -72,7 +66,6 @@ export default function AISuggestionsPage() {
           placeholder="Ask anything about workouts, exercises, bodybuilding..."
         />
 
-        {/* Send Button */}
         <button
           onClick={handleSubmit}
           disabled={loading}
@@ -82,7 +75,6 @@ export default function AISuggestionsPage() {
         </button>
       </div>
 
-      {/* CATEGORY TABS */}
       <div className="flex gap-3 mt-4 text-sm">
         {["Exercises", "Workouts", "Nutrition", "Form Tips"].map((tab) => (
           <div
@@ -94,30 +86,17 @@ export default function AISuggestionsPage() {
         ))}
       </div>
       
-      {/* ERROR MESSAGE */}
-      {error === "501" && (
-        <div className="mt-8 max-w-3xl w-full bg-blue-900/30 border border-blue-500/50 text-blue-200 p-6 rounded-2xl space-y-4">
-          <h3 className="font-semibold text-lg text-white">🚀 AI Feature Requires Deployment</h3>
-          <p className="text-blue-300">This feature uses a backend Cloud Function to connect to the AI. To use it, you first need to deploy the function to get its public URL.</p>
-          <div className="space-y-2 text-sm">
-              <p>1. Open a terminal and run the following command to deploy:</p>
-              <code className="block bg-black/50 px-3 py-2 rounded-md text-blue-100 font-mono text-xs">firebase deploy --only functions</code>
-              <p>2. After deployment, the terminal will show you a "Function URL" for `exerciseAI`.</p>
-              <p>3. Create a file named `.env.local` in the root of your project and add the URL:</p>
-              <code className="block bg-black/50 px-3 py-2 rounded-md text-blue-100 font-mono text-xs">NEXT_PUBLIC_FIREBASE_AI_URL="YOUR_FUNCTION_URL_HERE"</code>
-              <p>4. Restart your local development server for the change to take effect.</p>
+      {error && (
+        <div className="mt-8 max-w-3xl w-full bg-destructive/20 border border-destructive/50 text-destructive-foreground p-4 rounded-xl space-y-2">
+          <div className="flex items-center gap-2">
+            <Bot className="h-5 w-5"/>
+            <p className="font-semibold">AI Assistant Error</p>
           </div>
-        </div>
-      )}
-      {error && error !== "501" && (
-        <div className="mt-8 max-w-3xl w-full bg-destructive/20 border border-destructive/50 text-destructive-foreground p-4 rounded-xl">
-          <p className="font-semibold">An Error Occurred</p>
-          <p>{error}</p>
+          <p className="text-sm">{error}</p>
         </div>
       )}
 
 
-      {/* RESPONSE AREA */}
       { (loading && !response) && (
         <div className="mt-8 max-w-3xl w-full text-center text-muted-foreground">
             <Loader2 className="animate-spin inline-block h-6 w-6" />
