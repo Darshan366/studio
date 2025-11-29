@@ -59,11 +59,6 @@
             "type": "string",
             "enum": ["Anything", "Vegetarian", "Vegan"],
             "description": "The user's dietary preference."
-        },
-        "fitnessGoal": {
-            "type": "string",
-            "enum": ["Fat Loss", "Muscle Gain", "Maintenance"],
-            "description": "The user's primary fitness goal."
         }
       },
       "required": ["uid", "name", "email", "fitnessLevel"]

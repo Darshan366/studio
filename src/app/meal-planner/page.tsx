@@ -21,18 +21,10 @@ type MealPlan = {
   [key: string]: string[];
 };
 
-type AIResponse = {
-  suggestions: string[];
-  error?: string;
-}
-
 function AddMealDialog({ day, onAddMeal }: { day: string; onAddMeal: (meal: string) => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const [meal, setMeal] = useState('');
-  const [aiSuggestions, setAISuggestions] = useState<string[]>([]);
-  const [isAILoading, setIsAILoading] = useState(false);
   const { user } = useUser();
-  const { toast } = useToast();
   const firestore = useFirestore();
   
   const userDocRef = useMemoFirebase(() => {
@@ -43,48 +35,15 @@ function AddMealDialog({ day, onAddMeal }: { day: string; onAddMeal: (meal: stri
   const { data: userProfile } = useDoc<UserProfile>(userDocRef);
 
   const quickSuggestions = useMemo(() => {
-    if (!userProfile) return [];
-    return getMealsForDay(day, userProfile.dietaryPreference).slice(0, 4);
+    // We pass 'Anything' as a default if the profile isn't loaded or doesn't have the pref.
+    const preference = userProfile?.dietaryPreference || 'Anything';
+    return getMealsForDay(day, preference).slice(0, 6);
   }, [day, userProfile]);
-  
-
-  const getAiSuggestions = async () => {
-    if (!user || !userProfile) return;
-    setIsAILoading(true);
-    setAISuggestions([]);
-
-    try {
-      const res = await fetch("/api/meal-suggestions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userProfile, day }),
-      });
-
-      const data: AIResponse = await res.json();
-
-      if (!res.ok) {
-          throw new Error(data.error || "An unknown error occurred.");
-      }
-      
-      setAISuggestions(data.suggestions);
-
-    } catch (err: any) {
-        console.error("Error fetching AI response:", err);
-        toast({
-            variant: 'destructive',
-            title: 'Failed to get AI suggestions',
-            description: err.message || "Failed to fetch response from the server. Have you set your GEMINI_API_KEY in the .env file?",
-        });
-    } finally {
-        setIsAILoading(false);
-    }
-  };
 
   const handleAdd = () => {
     if (meal.trim()) {
       onAddMeal(meal);
       setMeal('');
-      setAISuggestions([]);
       setIsOpen(false);
     }
   };
@@ -92,15 +51,12 @@ function AddMealDialog({ day, onAddMeal }: { day: string; onAddMeal: (meal: stri
   const handleSuggestionClick = (suggestion: string) => {
       onAddMeal(suggestion);
       setMeal('');
-      setAISuggestions([]);
       setIsOpen(false);
   }
   
-  // Reset state when dialog is closed
   const onOpenChange = (open: boolean) => {
       if (!open) {
           setMeal('');
-          setAISuggestions([]);
       }
       setIsOpen(open);
   }
@@ -122,32 +78,18 @@ function AddMealDialog({ day, onAddMeal }: { day: string; onAddMeal: (meal: stri
             <Input id="meal-name" value={meal} onChange={(e) => setMeal(e.target.value)} placeholder="e.g., Grilled Chicken Salad" />
           </div>
           
-          <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-2">Quick Suggestions</h4>
-            <div className="grid grid-cols-2 gap-2">
-              {quickSuggestions.map((s, i) => (
-                <Button key={i} variant="outline" className="h-auto justify-start text-left" onClick={() => handleSuggestionClick(s.name)}>
-                  {s.name}
-                </Button>
-              ))}
+          {quickSuggestions.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground mb-2">Suggestions</h4>
+              <div className="grid grid-cols-2 gap-2">
+                {quickSuggestions.map((s, i) => (
+                  <Button key={i} variant="outline" className="h-auto justify-start text-left" onClick={() => handleSuggestionClick(s.name)}>
+                    {s.name}
+                  </Button>
+                ))}
+              </div>
             </div>
-          </div>
-
-          <div className="space-y-2">
-              <Button onClick={getAiSuggestions} disabled={isAILoading} variant="secondary" className="w-full">
-                  {isAILoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Bot className="w-4 h-4 mr-2" />}
-                  Get AI Suggestions
-              </Button>
-              {aiSuggestions.length > 0 && (
-                <div className="grid grid-cols-2 gap-2 pt-2">
-                  {aiSuggestions.map((s, i) => (
-                    <Button key={i} variant="outline" className="h-auto justify-start text-left" onClick={() => handleSuggestionClick(s)}>
-                      {s}
-                    </Button>
-                  ))}
-                </div>
-              )}
-          </div>
+          )}
         </div>
         <DialogFooter>
           <Button onClick={handleAdd} disabled={!meal.trim()}>Add Meal</Button>

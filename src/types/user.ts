@@ -1,4 +1,3 @@
-
 import { z } from 'zod';
 
 export const UserProfileSchema = z.object({
@@ -25,7 +24,6 @@ export const UserProfileSchema = z.object({
   weight: z.number().optional(),
   gender: z.enum(['Male', 'Female', 'Other', 'Prefer not to say']).optional(),
   dietaryPreference: z.enum(['Anything', 'Vegetarian', 'Vegan']).optional(),
-  fitnessGoal: z.enum(['Fat Loss', 'Muscle Gain', 'Maintenance']).optional(),
 });
 
 
