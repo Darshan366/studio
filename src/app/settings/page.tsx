@@ -10,14 +10,14 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { useUser, useAuth, useFirebaseApp, useFirestore } from "@/firebase"
+import { useUser, useAuth, useFirebaseApp, useFirestore, useDoc, useMemoFirebase } from "@/firebase"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { updateProfile } from "firebase/auth"
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from "@/hooks/use-toast"
-import { Loader2, User, Dumbbell, Heart, Camera, BarChart3, Trophy, Flame, MapPin } from "lucide-react"
+import { Loader2, User, Dumbbell, Heart, Camera, BarChart3, Trophy, Flame, MapPin, Weight, VenetianMask } from "lucide-react"
 import { doc, updateDoc } from "firebase/firestore"
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -25,6 +25,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Image from "next/image"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type { UserProfile } from "@/types/user";
 
 const profileFormSchema = z.object({
     name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -32,6 +33,8 @@ const profileFormSchema = z.object({
     fitnessLevel: z.enum(['Beginner', 'Intermediate', 'Advanced']).optional(),
     city: z.string().optional(),
     gymAddress: z.string().optional(),
+    weight: z.coerce.number().min(0, "Weight must be a positive number.").optional(),
+    gender: z.enum(['Male', 'Female', 'Other', 'Prefer not to say']).optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -42,6 +45,9 @@ function EditProfileForm() {
     const auth = useAuth();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
+    const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
     
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
@@ -51,31 +57,33 @@ function EditProfileForm() {
             fitnessLevel: 'Beginner',
             city: '',
             gymAddress: '',
+            weight: undefined,
+            gender: 'Prefer not to say',
         }
     });
 
     useEffect(() => {
-        if(user && firestore) {
+        if(userProfile) {
             form.reset({
-                name: user.displayName || '',
-                bio: '', 
-                fitnessLevel: 'Beginner',
-                city: '',
-                gymAddress: '',
+                name: userProfile.name || '',
+                bio: userProfile.bio || '', 
+                fitnessLevel: userProfile.fitnessLevel || 'Beginner',
+                city: userProfile.city || '',
+                gymAddress: userProfile.gymAddress || '',
+                weight: userProfile.weight || undefined,
+                gender: userProfile.gender || 'Prefer not to say',
             });
         }
-    }, [user, firestore, form]);
+    }, [userProfile, form]);
 
 
     const onSubmit = async (data: ProfileFormValues) => {
-        if (!user || !auth.currentUser) return;
+        if (!user || !auth.currentUser || !userDocRef) return;
         setIsSubmitting(true);
         try {
             if (data.name !== user.displayName) {
                 await updateProfile(auth.currentUser, { displayName: data.name });
             }
-            
-            const userDocRef = doc(firestore, 'users', user.uid);
             
             // In a real app, geocode the address to get lat/lon
             const placeholderCoords = { latitude: 34.0522, longitude: -118.2437 };
@@ -87,6 +95,8 @@ function EditProfileForm() {
                 city: data.city,
                 gymAddress: data.gymAddress,
                 gymCoordinates: placeholderCoords, // Add real geocoding in production
+                weight: data.weight,
+                gender: data.gender,
             });
 
             toast({
@@ -105,6 +115,14 @@ function EditProfileForm() {
         }
     }
 
+
+    if (isProfileLoading) {
+        return (
+            <div className="flex items-center justify-center p-10">
+                <Loader2 className="animate-spin" />
+            </div>
+        )
+    }
 
     return (
       <Card className="border-none bg-transparent shadow-none">
@@ -137,6 +155,44 @@ function EditProfileForm() {
                             </FormItem>
                         )}
                     />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       <FormField
+                            control={form.control}
+                            name="weight"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="flex items-center gap-2 text-muted-foreground"><Weight size={14}/> Weight (kg)</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" placeholder="70" {...field} className="bg-muted/40 border-border/30 focus:bg-background/60 transition-all"/>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="gender"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="flex items-center gap-2 text-muted-foreground"><VenetianMask size={14}/> Gender</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl>
+                                        <SelectTrigger className="bg-muted/40 border-border/30 focus:bg-background/60 transition-all">
+                                            <SelectValue placeholder="Select gender" />
+                                        </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="Male">Male</SelectItem>
+                                            <SelectItem value="Female">Female</SelectItem>
+                                            <SelectItem value="Other">Other</SelectItem>
+                                            <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
                     <FormField
                         control={form.control}
                         name="fitnessLevel"
@@ -379,5 +435,3 @@ export default function SettingsPage() {
         </div>
     )
 }
-
-    

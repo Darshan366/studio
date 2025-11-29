@@ -49,6 +49,8 @@ const formSchema = z.object({
     .min(6, { message: 'Password must be at least 6 characters.' }),
   fitnessLevel: z.enum(['Beginner', 'Intermediate', 'Advanced']),
   bio: z.string().max(160, { message: "Bio cannot be longer than 160 characters." }).optional(),
+  weight: z.coerce.number().min(0, { message: "Weight must be a positive number."}).optional(),
+  gender: z.enum(['Male', 'Female', 'Other', 'Prefer not to say']).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -69,6 +71,8 @@ export default function SignupPage() {
       password: '',
       fitnessLevel: 'Beginner',
       bio: '',
+      weight: undefined,
+      gender: 'Prefer not to say',
     },
   });
 
@@ -94,6 +98,8 @@ export default function SignupPage() {
         email: data.email,
         fitnessLevel: data.fitnessLevel,
         bio: data.bio || '',
+        weight: data.weight || null,
+        gender: data.gender || null,
         createdAt: serverTimestamp(),
       });
 
@@ -135,6 +141,8 @@ export default function SignupPage() {
           photoURL: user.photoURL,
           fitnessLevel: 'Beginner', // Default value
           bio: '', // Default value
+          weight: null,
+          gender: 'Prefer not to say',
           createdAt: serverTimestamp(),
         });
         toast({
@@ -170,8 +178,8 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background">
-      <Card className="mx-auto max-w-sm">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background py-12">
+      <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
           <CardTitle className="text-xl">Sign Up</CardTitle>
           <CardDescription>
@@ -237,6 +245,44 @@ export default function SignupPage() {
                   </FormItem>
                 )}
               />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="weight"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Weight (kg)</FormLabel>
+                        <FormControl>
+                        <Input type="number" placeholder="70" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="gender"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Gender</FormLabel>
+                         <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select gender" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                <SelectItem value="Male">Male</SelectItem>
+                                <SelectItem value="Female">Female</SelectItem>
+                                <SelectItem value="Other">Other</SelectItem>
+                                <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              </div>
               <FormField
                 control={form.control}
                 name="fitnessLevel"

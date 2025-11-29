@@ -46,6 +46,14 @@
           "type": "string",
           "format": "date",
           "description": "The last date the user checked in."
+        },
+        "weight": {
+          "type": "number",
+          "description": "The user's weight in kilograms."
+        },
+        "gender": {
+          "type": "string",
+          "enum": ["Male", "Female", "Other", "Prefer not to say"]
         }
       },
       "required": ["uid", "name", "email", "fitnessLevel"]
@@ -190,5 +198,3 @@
     }
   }
 }
-
-    

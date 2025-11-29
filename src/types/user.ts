@@ -22,6 +22,6 @@ export interface UserProfile {
   };
   streakCount?: number;
   lastCheckInDate?: string;
+  weight?: number;
+  gender?: 'Male' | 'Female' | 'Other' | 'Prefer not to say';
 }
-
-    
