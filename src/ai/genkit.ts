@@ -8,7 +8,7 @@ import { googleAI } from '@genkit-ai/google-genai';
 // This is required to pass complex objects to the LLM prompt.
 import {
   registerHandlebarsHelpers,
-} from '@genkit-ai/ai/handlebars';
+} from '@genkit-ai/google-genai';
 registerHandlebarsHelpers();
 
 export const ai: Ai = genkit({
