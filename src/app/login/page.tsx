@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -6,8 +7,8 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useAuth } from '@/firebase';
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, getAdditionalUserInfo } from 'firebase/auth';
+import { useAuth, initiateEmailSignIn } from '@/firebase';
+import { signInWithPopup, GoogleAuthProvider, getAdditionalUserInfo } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -56,32 +57,26 @@ export default function LoginPage() {
     },
   });
 
-  const onSubmit = async (data: FormValues) => {
+  const onSubmit = (data: FormValues) => {
     setIsLoading(true);
-    try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
-      // The AuthLayout will handle the redirect on successful login.
-    } catch (error) {
-       let description = 'An unexpected error occurred. Please try again.';
-       if (error instanceof FirebaseError) {
-         switch (error.code) {
-           case 'auth/invalid-credential':
-             description = 'Invalid email or password. Please try again.';
-             break;
-           default:
-             description = 'Failed to login. Please try again later.';
-             break;
-         }
-       }
-        console.error('Login error', error);
-        toast({
-            variant: 'destructive',
-            title: 'Login Failed',
-            description,
-        });
-    } finally {
-        setIsLoading(false);
-    }
+    // Use non-blocking sign-in. The onAuthStateChanged listener in AuthLayout
+    // will handle the redirect on success. On failure, nothing happens.
+    initiateEmailSignIn(auth, data.email, data.password);
+
+    // We can't know for sure if it will fail here, but we can give a generic
+    // message and reset the form after a short delay if the user isn't redirected.
+    // A more advanced implementation might use a custom event for auth failures.
+    setTimeout(() => {
+        // If we are still on the login page after a delay, the login likely failed.
+        if (window.location.pathname === '/login') {
+            toast({
+                variant: 'destructive',
+                title: 'Login Failed',
+                description: 'Invalid email or password. Please try again.',
+            });
+            setIsLoading(false);
+        }
+    }, 2000); // 2-second delay
   };
 
   const handleGoogleSignIn = async () => {
@@ -123,7 +118,7 @@ export default function LoginPage() {
        } else {
          console.error('Google sign-in error:', error);
          toast({
-            variant: 'destructive',
+            variant: 'destructive,
             title: 'Google Sign-In Failed',
             description: 'Could not sign in with Google. Please try again.',
         });
