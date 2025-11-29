@@ -15,7 +15,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/types/user';
-import { allMeals, Meal, getMealsForDay } from '@/lib/meal-data';
 
 type MealPlan = {
   [key: string]: string[];
@@ -24,21 +23,18 @@ type MealPlan = {
 function AddMealDialog({ day, onAddMeal }: { day: string; onAddMeal: (meal: string) => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const [meal, setMeal] = useState('');
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [isAiLoading, setIsAiLoading] = useState(false);
   const { user } = useUser();
   const firestore = useFirestore();
-  
+  const { toast } = useToast();
+
   const userDocRef = useMemoFirebase(() => {
-      if (!user) return null;
-      return doc(firestore, 'users', user.uid);
+    if (!user) return null;
+    return doc(firestore, 'users', user.uid);
   }, [user, firestore]);
 
   const { data: userProfile } = useDoc<UserProfile>(userDocRef);
-
-  const quickSuggestions = useMemo(() => {
-    // We pass 'Anything' as a default if the profile isn't loaded or doesn't have the pref.
-    const preference = userProfile?.dietaryPreference || 'Anything';
-    return getMealsForDay(day, preference).slice(0, 6);
-  }, [day, userProfile]);
 
   const handleAdd = () => {
     if (meal.trim()) {
@@ -47,18 +43,50 @@ function AddMealDialog({ day, onAddMeal }: { day: string; onAddMeal: (meal: stri
       setIsOpen(false);
     }
   };
-  
+
   const handleSuggestionClick = (suggestion: string) => {
-      onAddMeal(suggestion);
-      setMeal('');
-      setIsOpen(false);
-  }
-  
+    onAddMeal(suggestion);
+    setMeal('');
+    setIsOpen(false);
+  };
+
   const onOpenChange = (open: boolean) => {
-      if (!open) {
-          setMeal('');
-      }
-      setIsOpen(open);
+    if (!open) {
+      setMeal('');
+      setAiSuggestions([]);
+    }
+    setIsOpen(open);
+  };
+  
+  const getAiSuggestions = async () => {
+    if (!userProfile) {
+        toast({
+            variant: 'destructive',
+            title: 'Please complete your profile first.'
+        });
+        return;
+    }
+    setIsAiLoading(true);
+    try {
+        const res = await fetch('/api/ai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                prompt: `I am a ${userProfile.gender || 'person'} weighing ${userProfile.weight || 'an average amount'}. My fitness level is ${userProfile.fitnessLevel || 'Beginner'}. Suggest 4 meal ideas for ${day}. Just return a comma separated list of names.`
+            })
+        });
+        if (!res.ok) throw new Error("Failed to get suggestions.");
+        const data = await res.json();
+        const suggestions = data.reply.split(',').map((s: string) => s.trim());
+        setAiSuggestions(suggestions);
+    } catch (e) {
+        toast({
+            variant: 'destructive',
+            title: 'Could not get AI suggestions.'
+        })
+    } finally {
+        setIsAiLoading(false);
+    }
   }
 
   return (
@@ -77,19 +105,27 @@ function AddMealDialog({ day, onAddMeal }: { day: string; onAddMeal: (meal: stri
             <Label htmlFor="meal-name" className="sr-only">Meal Name</Label>
             <Input id="meal-name" value={meal} onChange={(e) => setMeal(e.target.value)} placeholder="e.g., Grilled Chicken Salad" />
           </div>
-          
-          {quickSuggestions.length > 0 && (
+
+          {aiSuggestions.length > 0 && (
             <div>
-              <h4 className="text-sm font-medium text-muted-foreground mb-2">Suggestions</h4>
+              <h4 className="text-sm font-medium text-muted-foreground mb-2">AI Suggestions</h4>
               <div className="grid grid-cols-2 gap-2">
-                {quickSuggestions.map((s, i) => (
-                  <Button key={i} variant="outline" className="h-auto justify-start text-left" onClick={() => handleSuggestionClick(s.name)}>
-                    {s.name}
+                {aiSuggestions.map((s, i) => (
+                  <Button key={i} variant="outline" className="h-auto justify-start text-left" onClick={() => handleSuggestionClick(s)}>
+                    {s}
                   </Button>
                 ))}
               </div>
             </div>
           )}
+
+          {aiSuggestions.length === 0 && (
+            <Button onClick={getAiSuggestions} variant="outline" className="w-full" disabled={isAiLoading}>
+                {isAiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Bot className="mr-2 h-4 w-4" />}
+                Get AI Suggestions
+            </Button>
+          )}
+
         </div>
         <DialogFooter>
           <Button onClick={handleAdd} disabled={!meal.trim()}>Add Meal</Button>
