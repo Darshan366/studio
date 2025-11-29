@@ -118,7 +118,7 @@ export default function LoginPage() {
        } else {
          console.error('Google sign-in error:', error);
          toast({
-            variant: 'destructive,
+            variant: 'destructive',
             title: 'Google Sign-In Failed',
             description: 'Could not sign in with Google. Please try again.',
         });
