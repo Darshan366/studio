@@ -62,9 +62,17 @@ export function getMealsForDay(day: string, dietaryPreference: 'Anything' | 'Veg
     const dinner = filtered.filter(m => m.category === 'Dinner');
 
     // Simple deterministic selection based on day of the week
-    return [
+    const suggestions = [
         breakfast[dayIndex % breakfast.length],
-        lunch[dayIndex % lunch.length],
-        dinner[dayIndex % dinner.length],
+        lunch[(dayIndex + 1) % lunch.length], // Offset to vary suggestions
+        dinner[(dayIndex + 2) % dinner.length],
     ].filter(Boolean); // filter out undefined if arrays are empty
+    
+    // Add a snack
+    const snacks = filtered.filter(m => m.category === 'Snack');
+    if (snacks.length > 0) {
+        suggestions.push(snacks[dayIndex % snacks.length]);
+    }
+    
+    return suggestions;
 }

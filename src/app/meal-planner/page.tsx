@@ -21,8 +21,8 @@ type MealPlan = {
   [key: string]: string[];
 };
 
-type MealSuggestionsResponse = {
-  suggestions?: string[];
+type AIResponse = {
+  reply: string;
   error?: string;
 }
 
@@ -48,35 +48,39 @@ function AddMealDialog({ day, onAddMeal }: { day: string; onAddMeal: (meal: stri
   }, [day, userProfile]);
   
 
-  const getAiSuggestions = () => {
-    if (!user) return;
+  const getAiSuggestions = async () => {
+    if (!user || !userProfile) return;
     setIsAILoading(true);
     setAISuggestions([]);
 
-    fetch('/api/meal-suggestions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: `Suggest some meals for ${day}.`,
-        userId: user.uid,
-      }),
-    })
-    .then(res => res.json())
-    .then((data: MealSuggestionsResponse) => {
-      if (data.suggestions) {
-        setAISuggestions(data.suggestions);
-      } else if (data.error) {
-        throw new Error(data.error);
-      }
-    })
-    .catch(err => {
-      toast({
-        variant: 'destructive',
-        title: 'Failed to get AI suggestions',
-        description: err.message
+    const prompt = `I am creating a meal plan. My fitness goal is ${userProfile.fitnessGoal} and my dietary preference is ${userProfile.dietaryPreference}. Please suggest 4 to 6 meal ideas for ${day}. Please return only a comma-separated list of meal names, for example: "Grilled Chicken, Brown Rice, Steamed Broccoli"`;
+
+    try {
+      const res = await fetch("/api/ai", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt }),
       });
-    })
-    .finally(() => setIsAILoading(false));
+
+      const data: AIResponse = await res.json();
+
+      if (!res.ok) {
+          throw new Error(data.error || "An unknown error occurred.");
+      }
+      
+      const suggestions = data.reply.split(',').map(s => s.trim()).filter(Boolean);
+      setAISuggestions(suggestions);
+
+    } catch (err: any) {
+        console.error("Error fetching AI response:", err);
+        toast({
+            variant: 'destructive',
+            title: 'Failed to get AI suggestions',
+            description: err.message || "Failed to fetch response from the server.",
+        });
+    } finally {
+        setIsAILoading(false);
+    }
   };
 
   const handleAdd = () => {
