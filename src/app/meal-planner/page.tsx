@@ -22,7 +22,7 @@ type MealPlan = {
 };
 
 type AIResponse = {
-  reply: string;
+  suggestions: string[];
   error?: string;
 }
 
@@ -53,13 +53,11 @@ function AddMealDialog({ day, onAddMeal }: { day: string; onAddMeal: (meal: stri
     setIsAILoading(true);
     setAISuggestions([]);
 
-    const prompt = `I am creating a meal plan. My fitness goal is ${userProfile.fitnessGoal} and my dietary preference is ${userProfile.dietaryPreference}. Please suggest 4 to 6 meal ideas for ${day}. Please return only a comma-separated list of meal names, for example: "Grilled Chicken, Brown Rice, Steamed Broccoli"`;
-
     try {
-      const res = await fetch("/api/ai", {
+      const res = await fetch("/api/meal-suggestions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt }),
+          body: JSON.stringify({ userProfile, day }),
       });
 
       const data: AIResponse = await res.json();
@@ -68,15 +66,14 @@ function AddMealDialog({ day, onAddMeal }: { day: string; onAddMeal: (meal: stri
           throw new Error(data.error || "An unknown error occurred.");
       }
       
-      const suggestions = data.reply.split(',').map(s => s.trim()).filter(Boolean);
-      setAISuggestions(suggestions);
+      setAISuggestions(data.suggestions);
 
     } catch (err: any) {
         console.error("Error fetching AI response:", err);
         toast({
             variant: 'destructive',
             title: 'Failed to get AI suggestions',
-            description: err.message || "Failed to fetch response from the server.",
+            description: err.message || "Failed to fetch response from the server. Have you set your GEMINI_API_KEY in the .env file?",
         });
     } finally {
         setIsAILoading(false);

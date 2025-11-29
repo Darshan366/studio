@@ -1,29 +1,32 @@
 
-export interface UserProfile {
-  uid: string;
-  id: string;
-  name: string;
-  email: string;
-  fitnessLevel: 'Beginner' | 'Intermediate' | 'Advanced';
-  photoURL?: string;
-  bio?: string;
-  gymAddress?: string;
-  gymCoordinates?: {
-    latitude: number;
-    longitude: number;
-  };
-  city?: string;
-  usualGymTime?: {
-      start: string; // HH:MM
-      end: string; // HH:MM
-  };
-  attendance?: {
-    [date: string]: boolean;
-  };
-  streakCount?: number;
-  lastCheckInDate?: string;
-  weight?: number;
-  gender?: 'Male' | 'Female' | 'Other' | 'Prefer not to say';
-  dietaryPreference?: 'Anything' | 'Vegetarian' | 'Vegan';
-  fitnessGoal?: 'Fat Loss' | 'Muscle Gain' | 'Maintenance';
-}
+import { z } from 'zod';
+
+export const UserProfileSchema = z.object({
+  uid: z.string(),
+  id: z.string().optional(), // id is not always present
+  name: z.string(),
+  email: z.string().email(),
+  fitnessLevel: z.enum(['Beginner', 'Intermediate', 'Advanced']),
+  photoURL: z.string().url().optional(),
+  bio: z.string().optional(),
+  gymAddress: z.string().optional(),
+  gymCoordinates: z.object({
+    latitude: z.number(),
+    longitude: z.number(),
+  }).optional(),
+  city: z.string().optional(),
+  usualGymTime: z.object({
+    start: z.string(), // HH:MM
+    end: z.string(), // HH:MM
+  }).optional(),
+  attendance: z.record(z.boolean()).optional(),
+  streakCount: z.number().optional(),
+  lastCheckInDate: z.string().optional(),
+  weight: z.number().optional(),
+  gender: z.enum(['Male', 'Female', 'Other', 'Prefer not to say']).optional(),
+  dietaryPreference: z.enum(['Anything', 'Vegetarian', 'Vegan']).optional(),
+  fitnessGoal: z.enum(['Fat Loss', 'Muscle Gain', 'Maintenance']).optional(),
+});
+
+
+export type UserProfile = z.infer<typeof UserProfileSchema>;
