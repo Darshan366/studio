@@ -16,10 +16,11 @@ export default function AISuggestionsPage() {
     setLoading(true);
     setResponse("");
     setError(null);
+    
+    const webhookUrl = "https://rahul264.app.n8n.cloud/webhook/ea211a1a-1318-4ecf-af86-ce2d24dcb5ba";
 
     try {
-        // Use the local proxy API route
-        const res = await fetch('/api/webhook-proxy', {
+        const res = await fetch(webhookUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ text: input }),
@@ -27,7 +28,7 @@ export default function AISuggestionsPage() {
 
         if (!res.ok) {
             const errorText = await res.text();
-            console.error("Proxy server response:", errorText);
+            console.error("Webhook server response:", errorText);
             throw new Error(`The webhook server responded with status ${res.status}.`);
         }
         
@@ -36,12 +37,13 @@ export default function AISuggestionsPage() {
         if (data && data.GYM) {
           setResponse(data.GYM);
         } else {
-          throw new Error("The response from the webhook was not in the expected format.");
+           setResponse(JSON.stringify(data, null, 2));
+           throw new Error("The response from the webhook was not in the expected format of { GYM: 'value' }.");
         }
 
     } catch (err: any) {
-        console.error("Error sending to proxy:", err);
-        setError(err.message || "Failed to send request to the webhook proxy.");
+        console.error("Error sending to webhook:", err);
+        setError(err.message || "Failed to send request to the webhook.");
     } finally {
         setLoading(false);
     }
