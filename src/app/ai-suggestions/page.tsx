@@ -18,7 +18,8 @@ export default function AISuggestionsPage() {
     setError(null);
 
     try {
-        const res = await fetch("https://rahul264.app.n8n.cloud/webhook-test/ea211a1a-1318-4ecf-af86-ce2d24dcb5ba", {
+        // Use the local proxy API route
+        const res = await fetch("/api/webhook-proxy", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ text: input }),
@@ -33,7 +34,7 @@ export default function AISuggestionsPage() {
         setResponse("Your message has been sent to the webhook successfully!");
 
     } catch (err: any) {
-        console.error("Error sending to webhook:", err);
+        console.error("Error sending to webhook proxy:", err);
         setError(err.message || "Failed to send request to the webhook.");
     } finally {
         setLoading(false);
