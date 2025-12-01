@@ -18,10 +18,19 @@ export async function POST(req: Request) {
     if (!response.ok) {
       const errorBody = await response.text();
       console.error("Webhook server error:", errorBody);
-      return new NextResponse(errorBody, { status: response.status });
+      // Return the actual error from the webhook server to the client
+      return new NextResponse(errorBody || `Request failed with status ${response.status}`, { status: response.status });
     }
 
-    const data = await response.json();
+    // Handle potentially empty responses from the webhook
+    const responseText = await response.text();
+    if (!responseText) {
+      // If the response is empty, return a success response with an empty body
+      return NextResponse.json({});
+    }
+
+    // If the response has content, try to parse it as JSON
+    const data = JSON.parse(responseText);
     return NextResponse.json(data);
 
   } catch (error: any) {
