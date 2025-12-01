@@ -32,7 +32,13 @@ export default function AISuggestionsPage() {
             throw new Error(`The webhook server responded with status ${res.status}.`);
         }
         
-        setResponse("Your message has been sent to the webhook successfully!");
+        const data = await res.json();
+        
+        if (data && data.GYM) {
+          setResponse(data.GYM);
+        } else {
+          throw new Error("The response from the webhook was not in the expected format.");
+        }
 
     } catch (err: any) {
         console.error("Error sending to webhook:", err);
@@ -102,7 +108,7 @@ export default function AISuggestionsPage() {
       { (loading && !response) && (
         <div className="mt-8 max-w-3xl w-full text-center text-muted-foreground">
             <Loader2 className="animate-spin inline-block h-6 w-6" />
-            <p>Sending to webhook...</p>
+            <p>Waiting for the webhook...</p>
         </div>
       )}
       {response && (
