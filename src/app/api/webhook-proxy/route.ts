@@ -11,14 +11,11 @@ export async function POST(req: Request) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // n8n webhooks might not require special headers, but some services do.
-        // This is where you would add an API key if n8n required it.
       },
       body: JSON.stringify(body),
     });
 
     if (!response.ok) {
-      // If the webhook server returns an error, forward it to the client.
       const errorBody = await response.text();
       console.error("Webhook server error:", errorBody);
       return new NextResponse(errorBody, { status: response.status });
@@ -27,8 +24,15 @@ export async function POST(req: Request) {
     const data = await response.json();
     return NextResponse.json(data);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in webhook proxy:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    // Return a more detailed error message to the client
+    return new NextResponse(
+        JSON.stringify({
+            error: "Failed to proxy request to webhook.",
+            details: error.message || "An unknown error occurred."
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 }
