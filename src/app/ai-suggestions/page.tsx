@@ -32,13 +32,26 @@ export default function AISuggestionsPage() {
             throw new Error(`The webhook server responded with status ${res.status}.`);
         }
         
-        const data = await res.json();
-        
-        if (data && data.GYM) {
-          setResponse(data.GYM);
-        } else {
-           setResponse(JSON.stringify(data, null, 2));
-           throw new Error("The response from the webhook was not in the expected format of { GYM: 'value' }.");
+        // Check if the response has content before trying to parse it
+        const responseText = await res.text();
+        if (!responseText) {
+          setResponse("The webhook returned an empty response.");
+          return;
+        }
+
+        try {
+          const data = JSON.parse(responseText);
+          if (data && data.GYM) {
+            setResponse(data.GYM);
+          } else {
+             setResponse(`Webhook response: ${JSON.stringify(data, null, 2)}`);
+             setError("The response from the webhook was not in the expected format of { GYM: 'value' }.");
+          }
+        } catch (jsonError) {
+          // If parsing fails, it's not JSON. Display the raw text.
+          console.error("Failed to parse JSON:", jsonError);
+          setResponse(`Received non-JSON response from webhook: ${responseText}`);
+          setError("The webhook did not return valid JSON.");
         }
 
     } catch (err: any) {
