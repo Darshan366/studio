@@ -4,6 +4,9 @@
 import { NextResponse } from 'next/server';
 import { ai } from '@/ai/genkit';
 
+// This API route is no longer used by the AI Suggestions page,
+// but is kept for potential future use.
+
 export async function POST(req: Request) {
   try {
     const { prompt } = await req.json();

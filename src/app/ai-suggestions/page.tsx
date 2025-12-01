@@ -18,23 +18,23 @@ export default function AISuggestionsPage() {
     setError(null);
 
     try {
-        const res = await fetch("/api/ai", {
+        const res = await fetch("https://rahul264.app.n8n.cloud/webhook-test/ea211a1a-1318-4ecf-af86-ce2d24dcb5ba", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt: input }),
+            body: JSON.stringify({ text: input }),
         });
 
-        const data = await res.json();
-
         if (!res.ok) {
-            throw new Error(data.error || "An unknown error occurred.");
+            const errorData = await res.json().catch(() => ({ error: "An unknown error occurred."}));
+            throw new Error(errorData.error || `Request failed with status ${res.status}`);
         }
         
-        setResponse(data.reply);
+        // Since the webhook might not return a specific "reply", we'll just show a success message.
+        setResponse("Your message has been sent to the webhook successfully!");
 
     } catch (err: any) {
-        console.error("Error fetching AI response:", err);
-        setError(err.message || "Failed to fetch response from the server.");
+        console.error("Error sending to webhook:", err);
+        setError(err.message || "Failed to send request to the webhook.");
     } finally {
         setLoading(false);
     }
@@ -90,7 +90,7 @@ export default function AISuggestionsPage() {
         <div className="mt-8 max-w-3xl w-full bg-destructive/20 border border-destructive/50 text-destructive-foreground p-4 rounded-xl space-y-2">
           <div className="flex items-center gap-2">
             <Bot className="h-5 w-5"/>
-            <p className="font-semibold">AI Assistant Error</p>
+            <p className="font-semibold">Webhook Error</p>
           </div>
           <p className="text-sm">{error}</p>
         </div>
@@ -100,7 +100,7 @@ export default function AISuggestionsPage() {
       { (loading && !response) && (
         <div className="mt-8 max-w-3xl w-full text-center text-muted-foreground">
             <Loader2 className="animate-spin inline-block h-6 w-6" />
-            <p>Generating advice...</p>
+            <p>Sending to webhook...</p>
         </div>
       )}
       {response && (
