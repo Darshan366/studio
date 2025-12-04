@@ -18,7 +18,6 @@ import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { updateProfile, deleteUser } from "firebase/auth"
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from "@/hooks/use-toast"
 import { Loader2, User, Dumbbell, Heart, Camera, BarChart3, Trophy, Flame, MapPin, Weight, VenetianMask, ShieldAlert } from "lucide-react"
 import { doc, updateDoc } from "firebase/firestore"
@@ -71,7 +70,7 @@ function EditProfileForm() {
             bio: '',
             fitnessLevel: 'Beginner',
             city: '',
-            gymAddress: '',
+gymAddress: '',
             weight: '' as any, // Initialize with empty string to make it a controlled component
             gender: 'Prefer not to say',
         }
@@ -369,11 +368,15 @@ const statCards = [
 export default function SettingsPage() {
     const { user } = useUser();
     const auth = useAuth();
-    const app = useFirebaseApp();
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [avatarUrl, setAvatarUrl] = useState(user?.photoURL);
+
+    useEffect(() => {
+        setAvatarUrl(user?.photoURL);
+    }, [user?.photoURL]);
 
     const handleAvatarClick = () => {
         fileInputRef.current?.click();
@@ -393,31 +396,38 @@ export default function SettingsPage() {
         }
 
         setIsUploading(true);
-        const storage = getStorage(app);
         
         try {
-            const storageRef = ref(storage, `avatars/${user.uid}`);
-            await uploadBytes(storageRef, file);
-            const downloadURL = await getDownloadURL(storageRef);
-            
-            await updateProfile(auth.currentUser, { photoURL: downloadURL });
-            
-            const userDocRef = doc(firestore, 'users', user.uid);
-            await updateDoc(userDocRef, { photoURL: downloadURL });
-            
-            // Force a reload of the user object to get the new photoURL
-            // This is critical for the UI to update
-            await auth.currentUser.reload();
-            // Manually trigger a re-render by updating the user from the reloaded currentUser
-            // This part is tricky with hooks. The reload should trigger the onAuthStateChanged listener,
-            // but we can force it here for immediate feedback if needed.
-            // A router refresh can also help re-trigger data fetching hooks.
-            window.location.reload();
-            
-            toast({
-                title: 'Avatar Updated',
-                description: 'Your new profile picture looks great!',
-            });
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onloadend = async () => {
+                const base64data = reader.result;
+
+                const response = await fetch('/api/upload-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file: base64data, userId: user.uid }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Upload failed.');
+                }
+
+                const { secure_url } = await response.json();
+
+                // Optimistically update the UI
+                setAvatarUrl(secure_url);
+
+                // Update Firebase Auth and Firestore
+                await updateProfile(auth.currentUser!, { photoURL: secure_url });
+                const userDocRef = doc(firestore, 'users', user.uid);
+                await updateDoc(userDocRef, { photoURL: secure_url });
+
+                toast({
+                    title: 'Avatar Updated',
+                    description: 'Your new profile picture looks great!',
+                });
+            }
         } catch (error) {
             console.error("Error uploading avatar:", error);
             toast({
@@ -453,7 +463,7 @@ export default function SettingsPage() {
                         <div className="flex flex-col md:flex-row md:items-end">
                             <div className="relative h-32 w-32 md:h-40 md:w-40 flex-shrink-0 group">
                                 <Avatar className="h-full w-full border-4 border-background">
-                                    <AvatarImage src={user?.photoURL || `https://picsum.photos/seed/${user?.uid}/200`} alt="User avatar" />
+                                    <AvatarImage src={avatarUrl || `https://picsum.photos/seed/${user?.uid}/200`} alt="User avatar" />
                                     <AvatarFallback><User size={40}/></AvatarFallback>
                                 </Avatar>
                                 <div className="absolute inset-0 rounded-full border-2 border-primary/80 animate-pulse-slow"></div>
