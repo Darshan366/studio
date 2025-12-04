@@ -7,8 +7,8 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useAuth, initiateEmailSignIn } from '@/firebase';
-import { signInWithPopup, GoogleAuthProvider, getAdditionalUserInfo } from 'firebase/auth';
+import { useAuth } from '@/firebase';
+import { signInWithPopup, GoogleAuthProvider, getAdditionalUserInfo, signInWithEmailAndPassword } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -57,26 +57,29 @@ export default function LoginPage() {
     },
   });
 
-  const onSubmit = (data: FormValues) => {
+  const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
-    // Use non-blocking sign-in. The onAuthStateChanged listener in AuthLayout
-    // will handle the redirect on success. On failure, nothing happens.
-    initiateEmailSignIn(auth, data.email, data.password);
+    try {
+      await signInWithEmailAndPassword(auth, data.email, data.password);
+      // The onAuthStateChanged listener in AuthLayout will handle the redirect on success.
+    } catch (error) {
+        let title = 'Login Failed';
+        let description = 'An unexpected error occurred. Please try again.';
 
-    // We can't know for sure if it will fail here, but we can give a generic
-    // message and reset the form after a short delay if the user isn't redirected.
-    // A more advanced implementation might use a custom event for auth failures.
-    setTimeout(() => {
-        // If we are still on the login page after a delay, the login likely failed.
-        if (window.location.pathname === '/login') {
-            toast({
-                variant: 'destructive',
-                title: 'Login Failed',
-                description: 'Invalid email or password. Please try again.',
-            });
-            setIsLoading(false);
+        if (error instanceof FirebaseError) {
+            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                description = 'Invalid email or password. Please try again.';
+            }
         }
-    }, 2000); // 2-second delay
+        
+        toast({
+            variant: 'destructive',
+            title: title,
+            description: description,
+        });
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   const handleGoogleSignIn = async () => {
