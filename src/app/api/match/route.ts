@@ -62,31 +62,30 @@ export async function GET(req: Request) {
         });
         // --- END: Fetch seen users ---
 
+        const unseenUsers = allUsers.filter(u => !seenUserIds.has(u.uid));
+
         // If current user's location data is not available, we can't perform prioritized matching.
         // We'll return a list of all users they haven't seen yet.
         if (!currentUser || (!currentUser.gymAddress && !currentUser.gymCoordinates && !currentUser.city)) {
-            const profiles = allUsers.filter(u => !seenUserIds.has(u.uid));
-            return NextResponse.json({ profiles });
+            return NextResponse.json({ profiles: unseenUsers });
         }
 
         const sameGym: UserProfile[] = [];
         const nearby: UserProfile[] = [];
         const sameCity: UserProfile[] = [];
-        const others: UserProfile[] = []; // Fallback for anyone else
+        const others: UserProfile[] = [];
 
-        allUsers.forEach(user => {
-            if (seenUserIds.has(user.uid)) return;
-
-            let added = false;
+        unseenUsers.forEach(user => {
+            let categorized = false;
 
             // Priority 1: Same Gym
-            if (currentUser.gymAddress && user.gymAddress && currentUser.gymAddress === user.gymAddress) {
+            if (currentUser.gymAddress && user.gymAddress && currentUser.gymAddress.toLowerCase() === user.gymAddress.toLowerCase()) {
                 sameGym.push(user);
-                added = true;
+                categorized = true;
             }
 
-            // Priority 2: Nearby (within 5km)
-            if (!added && currentUser.gymCoordinates && user.gymCoordinates) {
+            // Priority 2: Nearby (within 5km) - This can include the same gym, we will filter later
+            if (currentUser.gymCoordinates && user.gymCoordinates) {
                 const distance = getDistance(
                     currentUser.gymCoordinates.latitude,
                     currentUser.gymCoordinates.longitude,
@@ -95,26 +94,30 @@ export async function GET(req: Request) {
                 );
                 if (distance <= 5) {
                     nearby.push(user);
-                    added = true;
+                    categorized = true;
                 }
             }
 
             // Priority 3: Same City
-            if (!added && currentUser.city && user.city && currentUser.city === user.city) {
+            if (currentUser.city && user.city && currentUser.city.toLowerCase() === user.city.toLowerCase()) {
                 sameCity.push(user);
-                added = true;
+                categorized = true;
             }
             
             // Fallback for remaining users
-            if (!added) {
+            if (!categorized) {
                 others.push(user);
             }
         });
 
-        const sortedProfiles = [...sameGym, ...nearby, ...sameCity, ...others];
+        // Use a Set to remove duplicates while maintaining priority order
+        const uniqueProfiles = new Set<UserProfile>();
 
-        // This final filter is redundant due to the check at the start of the loop, but it's a good safeguard.
-        const finalProfiles = sortedProfiles.filter(p => !seenUserIds.has(p.uid));
+        [...sameGym, ...nearby, ...sameCity, ...others].forEach(profile => {
+          uniqueProfiles.add(profile);
+        });
+        
+        const finalProfiles = Array.from(uniqueProfiles);
         
         return NextResponse.json({ profiles: finalProfiles });
 
