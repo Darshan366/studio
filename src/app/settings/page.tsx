@@ -40,6 +40,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { useRouter } from 'next/navigation';
 
 const profileFormSchema = z.object({
     name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -274,6 +275,7 @@ function EditProfileForm() {
 function DangerZone() {
     const { user } = useUser();
     const auth = useAuth();
+    const router = useRouter();
     const { toast } = useToast();
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -282,13 +284,10 @@ function DangerZone() {
         setIsDeleting(true);
         
         try {
-            // First, call the Cloud Function to delete all associated Firestore data
             const token = await auth.currentUser.getIdToken();
             const response = await fetch('/api/delete-user', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                headers: { 'Authorization': `Bearer ${token}` }
             });
             
             if (!response.ok) {
@@ -296,14 +295,13 @@ function DangerZone() {
                 throw new Error(errorData.error || 'Failed to delete user data from server.');
             }
 
-            // If server-side deletion is successful, delete the user from Firebase Auth
             await deleteUser(auth.currentUser);
 
             toast({
                 title: "Account Deleted",
                 description: "Your account and all associated data have been successfully deleted.",
             });
-            // The use-auth hook will handle the redirect to the login page on auth state change
+            router.push('/login');
             
         } catch (error: any) {
             console.error("Error deleting account:", error);
@@ -351,7 +349,7 @@ function DangerZone() {
                             <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction onClick={handleDeleteAccount} className="bg-destructive hover:bg-destructive/90">
-                                Yes, delete my account
+                                {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Yes, delete my account"}
                             </AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
@@ -402,15 +400,10 @@ export default function SettingsPage() {
             await uploadBytes(storageRef, file);
             const downloadURL = await getDownloadURL(storageRef);
             
-            // Update the user's profile in Firebase Authentication
             await updateProfile(auth.currentUser, { photoURL: downloadURL });
             
-            // Also update the user's document in Firestore
             const userDocRef = doc(firestore, 'users', user.uid);
             await updateDoc(userDocRef, { photoURL: downloadURL });
-
-            // Reload the user to get the latest profile info, which will trigger the UI to update
-            await auth.currentUser.reload();
             
             toast({
                 title: 'Avatar Updated',
