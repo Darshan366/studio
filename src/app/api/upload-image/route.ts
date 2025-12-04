@@ -1,9 +1,9 @@
 
 import { NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
-import 'dotenv/config';
 
 // Configure Cloudinary with credentials from environment variables
+// Next.js automatically loads variables from .env into process.env on the server-side
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -13,6 +13,12 @@ cloudinary.config({
 
 export async function POST(req: Request) {
   try {
+    // Check if the credentials are even there
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+        console.error("Cloudinary credentials are not configured in environment variables.");
+        return NextResponse.json({ error: 'Image upload service is not configured.' }, { status: 500 });
+    }
+
     const { file, userId, type } = await req.json();
 
     if (!file || !userId || !type) {
