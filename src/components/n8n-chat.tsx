@@ -7,6 +7,7 @@ import React, { useEffect, useRef } from 'react';
 
 const N8nChat = () => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const isInitialized = useRef(false); // Add a ref to track initialization
 
   useEffect(() => {
     // Ensure this runs only on the client side
@@ -14,30 +15,33 @@ const N8nChat = () => {
       return;
     }
     
-    // Check if the chat has already been initialized to prevent duplicates
-    if (chatContainerRef.current.querySelector('[data-n8n-chat-id]')) {
-        return;
-    }
+    // The main fix: Use a short timeout to ensure the dialog animation is complete
+    // before the n8n script tries to find its container element.
+    const timer = setTimeout(() => {
+        // Check if the chat has already been initialized to prevent duplicates
+        if (isInitialized.current || !chatContainerRef.current) {
+            return;
+        }
 
-    const script = document.createElement('script');
-    script.type = 'module';
-    script.innerHTML = `
-      import { createChat } from 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js';
-      
-      createChat({
-        webhookUrl: 'https://rahul264.app.n8n.cloud/webhook/b1226f26-e76b-4c8d-8d55-9a0704f903c6/chat',
-        initialData: {
-          // You can pass initial data to your workflow here if needed
-          source: 'gym-grinders-app'
-        },
-        host: document.getElementById('n8n-chat-container'),
-      });
-    `;
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.innerHTML = `
+          import { createChat } from 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js';
+          
+          createChat({
+            webhookUrl: 'https://rahul264.app.n8n.cloud/webhook/b1226f26-e76b-4c8d-8d55-9a0704f903c6/chat',
+            initialData: {
+              source: 'gym-grinders-app'
+            },
+            host: document.getElementById('n8n-chat-container'),
+          });
+        `;
 
-    chatContainerRef.current.appendChild(script);
+        chatContainerRef.current.appendChild(script);
+        isInitialized.current = true; // Mark as initialized
+    }, 100); // 100ms delay is usually enough
 
-    // No cleanup function needed as we are directly mounting it into the div
-    // and want it to persist.
+    return () => clearTimeout(timer); // Cleanup the timer
 
   }, []);
 
