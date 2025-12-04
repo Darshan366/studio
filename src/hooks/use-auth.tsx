@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ReactNode, useEffect, useState } from 'react';
@@ -18,6 +19,7 @@ export const AuthLayout = ({ children }: { children: ReactNode }) => {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const pathname = usePathname();
+  const [isRedirecting, setIsRedirecting] = useState(true);
   
   const isAuthPage = pathname === '/login';
   const isSignUpPage = pathname === '/signup';
@@ -25,22 +27,32 @@ export const AuthLayout = ({ children }: { children: ReactNode }) => {
 
 
   useEffect(() => {
-    if (isUserLoading) return;
+    if (isUserLoading) {
+      // Still waiting for Firebase to determine auth state
+      setIsRedirecting(true);
+      return;
+    }
 
     if (user) {
         // If user is logged in, and they are on a marketing/auth page, redirect to dashboard
         if (isAuthPage || isMarketingPage || isSignUpPage) {
             router.push('/dashboard');
+            // We don't set isRedirecting to false here because the new page will take over rendering.
+        } else {
+            setIsRedirecting(false);
         }
     } else {
         // If user is not logged in and not on a public/auth page, redirect to landing
         if (!isAuthPage && !isMarketingPage && !isSignUpPage) {
             router.push('/');
+             // We don't set isRedirecting to false here because the new page will take over rendering.
+        } else {
+            setIsRedirecting(false);
         }
     }
   }, [user, isUserLoading, isAuthPage, isMarketingPage, isSignUpPage, router, pathname]);
 
-  if (isUserLoading) {
+  if (isUserLoading || isRedirecting) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -69,10 +81,6 @@ export const AuthLayout = ({ children }: { children: ReactNode }) => {
     );
   }
   
-  // Fallback for edge cases, e.g. non-logged-in user on a protected route momentarily
-  return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-  );
+  // This will be shown for non-logged-in users on public pages, after the initial redirect check.
+  return <>{children}</>;
 };
