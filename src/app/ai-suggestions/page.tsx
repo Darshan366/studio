@@ -17,46 +17,34 @@ export default function AISuggestionsPage() {
     setResponse("");
     setError(null);
     
-    const webhookUrl = "https://rahul264.app.n8n.cloud/webhook/ea211a1a-1318-4ecf-af86-ce2d24dcb5ba";
+    // Calls our new, secure API route instead of the raw webhook
+    const apiUrl = "/api/ai-suggestions";
 
     try {
-        const res = await fetch(webhookUrl, {
+        const res = await fetch(apiUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: input }),
+            body: JSON.stringify({ prompt: input }),
         });
 
         if (!res.ok) {
-            const errorText = await res.text();
-            console.error("Webhook server response:", errorText);
-            throw new Error(`The webhook server responded with status ${res.status}.`);
+            const errorData = await res.json();
+            console.error("API server response:", errorData);
+            throw new Error(errorData.error || `The API server responded with status ${res.status}.`);
         }
         
-        // Check if the response has content before trying to parse it
-        const responseText = await res.text();
-        if (!responseText) {
-          setResponse("The webhook returned an empty response.");
-          return;
-        }
-
-        try {
-          const data = JSON.parse(responseText);
-          if (data && data.GYM) {
-            setResponse(data.GYM);
-          } else {
-             setResponse(`Webhook response: ${JSON.stringify(data, null, 2)}`);
-             setError("The response from the webhook was not in the expected format of { GYM: 'value' }.");
-          }
-        } catch (jsonError) {
-          // If parsing fails, it's not JSON. Display the raw text.
-          console.error("Failed to parse JSON:", jsonError);
-          setResponse(`Received non-JSON response from webhook: ${responseText}`);
-          setError("The webhook did not return valid JSON.");
+        const data = await res.json();
+        
+        if (data && data.reply) {
+          setResponse(data.reply);
+        } else {
+           setResponse(`API response: ${JSON.stringify(data, null, 2)}`);
+           setError("The response from the API was not in the expected format.");
         }
 
     } catch (err: any) {
-        console.error("Error sending to webhook:", err);
-        setError(err.message || "Failed to send request to the webhook.");
+        console.error("Error calling API route:", err);
+        setError(err.message || "Failed to send request to the API.");
     } finally {
         setLoading(false);
     }
@@ -112,7 +100,7 @@ export default function AISuggestionsPage() {
         <div className="mt-8 max-w-3xl w-full bg-destructive/20 border border-destructive/50 text-destructive-foreground p-4 rounded-xl space-y-2">
           <div className="flex items-center gap-2">
             <Bot className="h-5 w-5"/>
-            <p className="font-semibold">Webhook Error</p>
+            <p className="font-semibold">API Error</p>
           </div>
           <p className="text-sm">{error}</p>
         </div>
@@ -122,7 +110,7 @@ export default function AISuggestionsPage() {
       { (loading && !response) && (
         <div className="mt-8 max-w-3xl w-full text-center text-muted-foreground">
             <Loader2 className="animate-spin inline-block h-6 w-6" />
-            <p>Waiting for the webhook...</p>
+            <p>Waiting for the AI...</p>
         </div>
       )}
       {response && (
