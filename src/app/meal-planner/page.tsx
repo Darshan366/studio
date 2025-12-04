@@ -68,18 +68,30 @@ function AddMealDialog({ day, onAddMeal }: { day: string; onAddMeal: (meal: stri
         return;
     }
     setIsAiLoading(true);
+    setAiSuggestions([]);
     try {
-        const res = await fetch('/api/meal-suggestions', {
+        const prompt = `Suggest 4-6 high protein meal ideas for ${day} for a user with a ${userProfile.fitnessLevel} fitness level and a ${userProfile.dietaryPreference || 'Anything'} diet. Return a comma-separated list of meal names.`;
+        const res = await fetch('/api/ai-suggestions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userProfile, day })
+            body: JSON.stringify({ prompt })
         });
+
         if (!res.ok) {
             const errorData = await res.json();
-            throw new Error(errorData.error || "Failed to get suggestions.");
+            throw new Error(errorData.error || "Failed to get suggestions from the webhook.");
         }
         const data = await res.json();
-        setAiSuggestions(data.suggestions || []);
+        
+        // The webhook returns a single string, so we'll split it.
+        // This assumes the n8n workflow is configured to return a comma-separated string.
+        if (data.reply && typeof data.reply === 'string') {
+          const suggestions = data.reply.split(',').map(s => s.trim()).filter(Boolean);
+          setAiSuggestions(suggestions);
+        } else {
+          throw new Error("Received an unexpected format from the AI.");
+        }
+
     } catch (e: any) {
         toast({
             variant: 'destructive',
