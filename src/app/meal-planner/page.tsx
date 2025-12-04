@@ -1,14 +1,17 @@
+
 'use client';
 
 import React, { useState } from 'react';
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Utensils, RotateCcw, Maximize2, Trash2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { PlusCircle, Utensils, RotateCcw, Trash2, Bot } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import N8nChat from '@/components/n8n-chat';
@@ -73,7 +76,6 @@ export default function MealPlanner() {
     Sunday: [],
   });
 
-  const [isExpanded, setIsExpanded] = useState(false);
 
   const resetMealPlan = () => {
      setMealPlan({
@@ -94,35 +96,37 @@ export default function MealPlanner() {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-            <div className="flex items-start justify-between mb-6">
+    <div className="w-full">
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                <h1 className="text-3xl font-bold flex items-center gap-2">
-                    <Utensils className="w-7 h-7" /> Meal Planner
-                </h1>
-                <div className="flex items-center gap-2 mt-1">
-                    <p className="text-sm text-muted-foreground">
-                    Plan your meals for the week. Use the AI chat for ideas!
+                    <CardTitle className="text-2xl font-bold flex items-center gap-3">
+                        <Utensils className="w-6 h-6" /> Meal Planner
+                    </CardTitle>
+                     <p className="text-sm text-muted-foreground mt-1">
+                        Plan your meals for the week. Use the AI chat for ideas!
                     </p>
-                    <button
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    className="text-muted-foreground hover:text-foreground transition-colors ml-6"
-                    aria-label="Toggle Table Size"
-                    >
-                    <Maximize2 size={16} />
-                    </button>
                 </div>
-                </div>
-            </div>
-
-            <AnimatePresence>
-                <motion.div
-                key={isExpanded ? 'expanded' : 'collapsed'}
-                initial={{ width: '100%' }}
-                animate={{ width: isExpanded ? '100%' : '100%' }}
-                transition={{ duration: 0.4, ease: 'easeInOut' }}
-                >
+                 <Dialog>
+                    <DialogTrigger asChild>
+                        <Button size="icon" variant="outline" className="rounded-full h-10 w-10 bg-primary/10 border-primary/20 text-primary shadow-gym-glow shadow-primary/20 hover:bg-primary/20 hover:scale-105 transition-all">
+                            <Bot className="h-5 w-5" />
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl h-3/4 flex flex-col">
+                        <DialogHeader>
+                            <DialogTitle>AI Meal Assistant</DialogTitle>
+                            <DialogDescription>
+                            Ask me anything about nutrition or get meal ideas!
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="flex-1 overflow-hidden rounded-lg">
+                            <N8nChat />
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            </CardHeader>
+            <CardContent>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                     <thead>
@@ -176,26 +180,17 @@ export default function MealPlanner() {
                     </tbody>
                     </table>
                 </div>
-                </motion.div>
-            </AnimatePresence>
-            <div className="flex justify-center">
-                <Button
-                    onClick={resetMealPlan}
-                    variant="outline"
-                    className="mt-6 flex items-center gap-2 rounded-full border-border text-muted-foreground hover:bg-muted/50"
-                >
-                    <RotateCcw size={16} />
-                    Reset Meal Plan
-                </Button>
-            </div>
-        </div>
-
-        <div className="lg:col-span-1">
-             <Card className="h-[75vh] flex flex-col">
-                <CardContent className="p-0 flex-1">
-                    <N8nChat />
-                </CardContent>
-            </Card>
+            </CardContent>
+        </Card>
+        <div className="flex justify-center">
+            <Button
+                onClick={resetMealPlan}
+                variant="outline"
+                className="mt-6 flex items-center gap-2 rounded-full border-border text-muted-foreground hover:bg-muted/50"
+            >
+                <RotateCcw size={16} />
+                Reset Meal Plan
+            </Button>
         </div>
     </div>
   );
