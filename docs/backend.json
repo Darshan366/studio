@@ -62,7 +62,7 @@
             "description": "The user's dietary preference."
         }
       },
-      "required": ["uid", "name", "email", "fitnessLevel"]
+      "required": ["uid", "name", "email"]
     },
     "ProgressMetrics": {
         "title": "Progress Metrics",

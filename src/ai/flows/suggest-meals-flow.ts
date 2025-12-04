@@ -34,12 +34,12 @@ const prompt = ai.definePrompt({
   name: 'suggestMealsPrompt',
   input: { schema: SuggestMealsInputSchema },
   output: { schema: SuggestMealsOutputSchema },
-  prompt: `You are an expert nutritionist designing a meal plan.
+  prompt: `You are an expert nutritionist designing a meal plan for a user with a high-protein diet.
 
-User's fitness goal: {{{userProfile.fitnessGoal}}}
+User's fitness level: {{{userProfile.fitnessLevel}}}
 User's dietary preference: {{{userProfile.dietaryPreference}}}
 
-Please suggest 4 to 6 meal ideas suitable for {{day}}.
+Please suggest 4 to 6 high-protein meal ideas suitable for {{day}}.
 
 Return a list of meal names in the 'suggestions' array. Do not return markdown or any other formatting, just the JSON object.`,
 });

@@ -1,4 +1,3 @@
-
 import { z } from 'zod';
 
 export const UserProfileSchema = z.object({
@@ -6,7 +5,7 @@ export const UserProfileSchema = z.object({
   id: z.string().optional(), // id is not always present
   name: z.string(),
   email: z.string().email(),
-  fitnessLevel: z.enum(['Beginner', 'Intermediate', 'Advanced']),
+  fitnessLevel: z.enum(['Beginner', 'Intermediate', 'Advanced']).optional(),
   photoURL: z.string().url().optional(),
   coverURL: z.string().url().optional(), // Added for cover photo
   bio: z.string().optional(),

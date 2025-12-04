@@ -62,27 +62,29 @@ function AddMealDialog({ day, onAddMeal }: { day: string; onAddMeal: (meal: stri
     if (!userProfile) {
         toast({
             variant: 'destructive',
-            title: 'Please complete your profile first.'
+            title: 'Please complete your profile first.',
+            description: 'AI needs your fitness level and diet preferences to make suggestions.'
         });
         return;
     }
     setIsAiLoading(true);
     try {
-        const res = await fetch('/api/ai', {
+        const res = await fetch('/api/meal-suggestions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                prompt: `I am a ${userProfile.gender || 'person'} weighing ${userProfile.weight || 'an average amount'}. My fitness level is ${userProfile.fitnessLevel || 'Beginner'}. Suggest 4 meal ideas for ${day}. Just return a comma separated list of names.`
-            })
+            body: JSON.stringify({ userProfile, day })
         });
-        if (!res.ok) throw new Error("Failed to get suggestions.");
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.error || "Failed to get suggestions.");
+        }
         const data = await res.json();
-        const suggestions = data.reply.split(',').map((s: string) => s.trim());
-        setAiSuggestions(suggestions);
-    } catch (e) {
+        setAiSuggestions(data.suggestions || []);
+    } catch (e: any) {
         toast({
             variant: 'destructive',
-            title: 'Could not get AI suggestions.'
+            title: 'Could not get AI suggestions.',
+            description: e.message
         })
     } finally {
         setIsAiLoading(false);
