@@ -405,6 +405,9 @@ export default function SettingsPage() {
             const userDocRef = doc(firestore, 'users', user.uid);
             await updateDoc(userDocRef, { photoURL: downloadURL });
             
+            // This will trigger the useUser hook to get fresh data
+            await auth.currentUser.reload();
+            
             toast({
                 title: 'Avatar Updated',
                 description: 'Your new profile picture looks great!',
