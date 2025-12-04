@@ -1,6 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
+import 'dotenv/config';
 
 // Configure Cloudinary with credentials from environment variables
 cloudinary.config({
