@@ -70,7 +70,7 @@ function EditProfileForm() {
             bio: '',
             fitnessLevel: 'Beginner',
             city: '',
-gymAddress: '',
+            gymAddress: '',
             weight: '' as any, // Initialize with empty string to make it a controlled component
             gender: 'Prefer not to say',
         }
@@ -371,32 +371,35 @@ export default function SettingsPage() {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isUploading, setIsUploading] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const [avatarUrl, setAvatarUrl] = useState(user?.photoURL);
+    
+    const avatarInputRef = useRef<HTMLInputElement>(null);
+    const coverInputRef = useRef<HTMLInputElement>(null);
+    
+    const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
+    const { data: userProfile } = useDoc<UserProfile>(userDocRef);
+
+    const [avatarUrl, setAvatarUrl] = useState<string | undefined | null>(null);
+    const [coverUrl, setCoverUrl] = useState<string | undefined | null>(null);
 
     useEffect(() => {
-        setAvatarUrl(user?.photoURL);
-    }, [user?.photoURL]);
+        setAvatarUrl(userProfile?.photoURL);
+        setCoverUrl(userProfile?.coverURL);
+    }, [userProfile]);
 
-    const handleAvatarClick = () => {
-        fileInputRef.current?.click();
-    };
+    const handleImageUpload = async (file: File, type: 'avatar' | 'cover') => {
+        if (!user || !auth.currentUser) return;
 
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file || !user || !auth.currentUser) return;
-        
         if (!file.type.startsWith("image/")) {
-          toast({
-            variant: "destructive",
-            title: "Invalid File Type",
-            description: "Please select a valid image file (.jpg, .png).",
-          });
-          return;
+            toast({
+                variant: "destructive",
+                title: "Invalid File Type",
+                description: "Please select a valid image file (.jpg, .png).",
+            });
+            return;
         }
 
         setIsUploading(true);
-        
+
         try {
             const reader = new FileReader();
             reader.readAsDataURL(file);
@@ -406,7 +409,7 @@ export default function SettingsPage() {
                 const response = await fetch('/api/upload-image', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ file: base64data, userId: user.uid }),
+                    body: JSON.stringify({ file: base64data, userId: user.uid, type }),
                 });
 
                 if (!response.ok) {
@@ -414,48 +417,69 @@ export default function SettingsPage() {
                 }
 
                 const { secure_url } = await response.json();
-
-                // Optimistically update the UI
-                setAvatarUrl(secure_url);
-
-                // Update Firebase Auth and Firestore
-                await updateProfile(auth.currentUser!, { photoURL: secure_url });
-                const userDocRef = doc(firestore, 'users', user.uid);
-                await updateDoc(userDocRef, { photoURL: secure_url });
-
-                toast({
-                    title: 'Avatar Updated',
-                    description: 'Your new profile picture looks great!',
-                });
+                
+                if (type === 'avatar') {
+                    setAvatarUrl(secure_url);
+                    await updateProfile(auth.currentUser!, { photoURL: secure_url });
+                    await updateDoc(userDocRef!, { photoURL: secure_url });
+                    toast({ title: 'Avatar Updated', description: 'Your new profile picture looks great!' });
+                } else {
+                    setCoverUrl(secure_url);
+                    await updateDoc(userDocRef!, { coverURL: secure_url });
+                    toast({ title: 'Cover Photo Updated', description: 'Your new banner looks great!' });
+                }
             }
         } catch (error) {
-            console.error("Error uploading avatar:", error);
+            console.error(`Error uploading ${type}:`, error);
             toast({
                 variant: 'destructive',
                 title: 'Upload Failed',
-                description: 'There was a problem uploading your avatar.',
+                description: `There was a problem uploading your ${type}.`,
             });
         } finally {
             setIsUploading(false);
         }
     };
 
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'cover') => {
+        const file = event.target.files?.[0];
+        if (file) {
+            handleImageUpload(file, type);
+        }
+    };
+
+
     return (
         <div className="space-y-6">
             <Card className="overflow-visible border-none bg-transparent shadow-none">
                 <CardContent className="p-0">
-                    <div className="relative h-40 md:h-56 w-full rounded-lg">
+                    <div className="relative h-40 md:h-56 w-full rounded-lg group">
                         <Image
-                            src="https://picsum.photos/seed/cover/1200/400"
+                            src={coverUrl || "https://picsum.photos/seed/cover/1200/400"}
                             alt="Cover image"
                             className="object-cover rounded-lg"
                             fill
                             data-ai-hint="fitness gym"
                         />
+                         <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors rounded-lg"></div>
                          <div className="absolute top-2 right-2">
-                            <Button variant="secondary" size="sm" className="bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm">
-                                <Camera className="mr-2 h-4 w-4" /> Change Cover
+                            <Button 
+                                variant="secondary" 
+                                size="sm" 
+                                className="bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm"
+                                onClick={() => coverInputRef.current?.click()}
+                                disabled={isUploading}
+                            >
+                                {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Camera className="mr-2 h-4 w-4" />}
+                                Change Cover
                             </Button>
+                             <Input
+                                ref={coverInputRef}
+                                type="file"
+                                className="hidden"
+                                accept="image/png, image/jpeg, image/jpg"
+                                onChange={(e) => handleFileChange(e, 'cover')}
+                            />
                         </div>
                     </div>
                     
@@ -470,24 +494,24 @@ export default function SettingsPage() {
                                 <Button
                                     variant="secondary"
                                     size="icon"
-                                    onClick={handleAvatarClick}
+                                    onClick={() => avatarInputRef.current?.click()}
                                     className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"
                                     disabled={isUploading}
                                 >
                                     {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
                                 </Button>
                                 <Input
-                                    ref={fileInputRef}
+                                    ref={avatarInputRef}
                                     type="file"
                                     className="hidden"
                                     accept="image/png, image/jpeg, image/jpg"
-                                    onChange={handleFileChange}
+                                    onChange={(e) => handleFileChange(e, 'avatar')}
                                 />
                             </div>
                             
                             <div className="mt-4 md:mt-0 md:ml-6">
-                                <h1 className="text-2xl md:text-3xl font-bold">{user?.displayName || 'Alex'}</h1>
-                                <p className="text-muted-foreground">Beginner | "Fitness is a journey, not a destination."</p>
+                                <h1 className="text-2xl md:text-3xl font-bold">{userProfile?.name || user?.displayName}</h1>
+                                <p className="text-muted-foreground">{userProfile?.fitnessLevel} | "{userProfile?.bio || 'Fitness is a journey, not a destination.'}"</p>
                             </div>
                         </div>
 
@@ -556,5 +580,3 @@ export default function SettingsPage() {
         </div>
     )
 }
-
-    

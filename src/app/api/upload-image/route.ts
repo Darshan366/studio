@@ -12,19 +12,23 @@ cloudinary.config({
 
 export async function POST(req: Request) {
   try {
-    const { file, userId } = await req.json();
+    const { file, userId, type } = await req.json();
 
-    if (!file || !userId) {
-      return NextResponse.json({ error: 'Missing file data or user ID.' }, { status: 400 });
+    if (!file || !userId || !type) {
+      return NextResponse.json({ error: 'Missing file data, user ID, or upload type.' }, { status: 400 });
     }
+
+    const isAvatar = type === 'avatar';
+    const folder = isAvatar ? 'avatars' : 'covers';
+    const public_id = `${folder}/${userId}`;
 
     // Upload the image to Cloudinary
     const uploadResponse = await cloudinary.uploader.upload(file, {
-      public_id: `avatars/${userId}`, // Store in an 'avatars' folder with the user's ID as the public_id
+      public_id: public_id,
       overwrite: true, // Replace the image if one with the same public_id already exists
-      transformation: [
-        { width: 400, height: 400, crop: 'fill', gravity: 'face' }
-      ]
+      transformation: isAvatar 
+        ? [{ width: 400, height: 400, crop: 'fill', gravity: 'face' }]
+        : [{ width: 1200, height: 400, crop: 'fill' }]
     });
 
     return NextResponse.json({ secure_url: uploadResponse.secure_url });
@@ -33,5 +37,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Failed to upload image.' }, { status: 500 });
   }
 }
-
-    

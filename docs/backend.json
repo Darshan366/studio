@@ -14,6 +14,7 @@
           "enum": ["Beginner", "Intermediate", "Advanced"]
         },
         "photoURL": { "type": "string", "description": "URL of the user's profile picture." },
+        "coverURL": { "type": "string", "description": "URL of the user's cover photo." },
         "bio": { "type": "string", "description": "A short bio about the user." },
         "gymAddress": { "type": "string", "description": "The user's saved gym address." },
         "gymCoordinates": {
