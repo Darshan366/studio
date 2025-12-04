@@ -6,7 +6,7 @@ import { AuthLayout } from '@/hooks/use-auth';
 import { WorkoutProvider } from '@/context/WorkoutContext';
 
 export const metadata: Metadata = {
-  title: 'GymFlow',
+  title: 'Gym Grinders',
   description: 'Your modern gym and fitness companion.',
 };
 

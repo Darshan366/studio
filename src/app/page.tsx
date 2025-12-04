@@ -70,7 +70,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="text-center mb-20">
             <span className="inline-block px-4 py-2 bg-gym-green/20 text-gym-green rounded-full text-sm font-medium mb-6">
-              WHY CHOOSE GYMFLOW
+              WHY CHOOSE GYM GRINDERS
             </span>
             <h2 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-white to-gym-muted bg-clip-text text-transparent">
               Everything You Need to
@@ -178,7 +178,7 @@ export default function LandingPage() {
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <Dumbbell className="text-gym-green text-2xl" />
-                <h3 className="text-xl font-bold text-gym-green">GymFlow</h3>
+                <h3 className="text-xl font-bold text-gym-green">Gym Grinders</h3>
               </div>
               <p className="text-gym-muted text-sm">
                 The ultimate platform for finding your perfect workout partner and achieving your fitness goals together.
@@ -218,7 +218,7 @@ export default function LandingPage() {
           
           <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between">
             <div className="text-sm text-gym-muted mb-4 md:mb-0">
-              © 2024 GymFlow. All rights reserved.
+              © 2024 Gym Grinders. All rights reserved.
             </div>
           </div>
         </div>
@@ -226,5 +226,3 @@ export default function LandingPage() {
     </div>
   );
 }
-
-    

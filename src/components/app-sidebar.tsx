@@ -15,7 +15,7 @@ export default function AppSidebar() {
         <div className="group/sidebar-item flex h-12 w-full min-w-0 items-center gap-3 rounded-md p-2 text-foreground">
           <Dumbbell className="size-6 shrink-0 text-primary" />
           <div className="min-w-0 flex-1 overflow-hidden">
-            <p className="truncate text-lg font-semibold">GymFlow</p>
+            <p className="truncate text-lg font-semibold">Gym Grinders</p>
           </div>
         </div>
       </SidebarHeader>
