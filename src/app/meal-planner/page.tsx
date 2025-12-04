@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -9,20 +9,38 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Utensils, RotateCcw, Trash2, Bot } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { PlusCircle, Utensils, RotateCcw, Trash2, Bot, Sparkles } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import N8nChat from '@/components/n8n-chat';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import type { UserProfile } from '@/types/user';
+import { getMealsForDay, Meal } from '@/lib/meal-data';
+import { Badge } from '@/components/ui/badge';
 
-type MealPlan = {
-  [key: string]: string[];
-};
 
 function AddMealDialog({ day, onAddMeal }: { day: string; onAddMeal: (meal: string) => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const [meal, setMeal] = useState('');
+  const [suggestions, setSuggestions] = useState<Meal[]>([]);
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+  const { data: userProfile } = useDoc<UserProfile>(userDocRef);
+
+  useEffect(() => {
+    if (isOpen && userProfile) {
+        const mealSuggestions = getMealsForDay(day, userProfile.dietaryPreference);
+        // Take first 5 suggestions
+        setSuggestions(mealSuggestions.slice(0, 5));
+    }
+  }, [isOpen, day, userProfile]);
   
   const handleAdd = () => {
     if (meal.trim()) {
@@ -55,6 +73,23 @@ function AddMealDialog({ day, onAddMeal }: { day: string; onAddMeal: (meal: stri
             <Label htmlFor="meal-name" className="sr-only">Meal Name</Label>
             <Input id="meal-name" value={meal} onChange={(e) => setMeal(e.target.value)} placeholder="e.g., Grilled Chicken Salad" />
           </div>
+           {suggestions.length > 0 && (
+             <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> Suggestions</Label>
+                <div className="flex flex-wrap gap-2">
+                    {suggestions.map((suggestion) => (
+                        <Badge
+                            key={suggestion.name}
+                            variant="outline"
+                            className="cursor-pointer hover:bg-muted"
+                            onClick={() => setMeal(suggestion.name)}
+                        >
+                            {suggestion.name}
+                        </Badge>
+                    ))}
+                </div>
+             </div>
+           )}
         </div>
         <DialogFooter>
           <Button onClick={handleAdd} disabled={!meal.trim()}>Add Meal</Button>
@@ -195,3 +230,9 @@ export default function MealPlanner() {
     </div>
   );
 }
+
+// AddMealDialog needs a type for the meal plan
+type MealPlan = {
+  [key: string]: string[];
+};
+

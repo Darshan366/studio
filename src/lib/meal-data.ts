@@ -1,3 +1,4 @@
+
 export type Meal = {
     name: string;
     category: 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack';
