@@ -44,31 +44,35 @@ export async function GET(req: Request) {
         
         const currentUser = allUsers.find(u => u.uid === currentUserId);
         
-        // --- START: Fetch existing matches to exclude them ---
+        // --- START: Fetch existing matches and swipes to exclude them ---
         const matchesQuery = query(collection(db, 'matches'), where('users', 'array-contains', currentUserId));
         const matchesSnap = await getDocs(matchesQuery);
-        const matchedUserIds = new Set<string>(matchesSnap.docs.map(doc => {
+        const seenUserIds = new Set<string>([currentUserId]);
+        
+        matchesSnap.docs.forEach(doc => {
             const users = doc.data().users as string[];
-            return users.find(uid => uid !== currentUserId)!;
-        }));
-        // --- END: Fetch existing matches ---
+            const otherUserId = users.find(uid => uid !== currentUserId);
+            if (otherUserId) seenUserIds.add(otherUserId);
+        });
 
-        if (!currentUser) {
-            // Can't do matching without the current user's location info
-            return NextResponse.json({ profiles: allUsers.filter(u => u.uid !== currentUserId && !matchedUserIds.has(u.uid)) });
-        }
-
-        const seenUserIds = new Set<string>([currentUserId, ...matchedUserIds]);
-        // Also fetch and add swiped-left users to `seenUserIds` for better filtering
         const swipesQuery = query(collection(db, 'swipes'), where('swiperId', '==', currentUserId));
         const swipesSnap = await getDocs(swipesQuery);
         swipesSnap.docs.forEach(doc => {
             seenUserIds.add(doc.data().targetId);
         });
+        // --- END: Fetch seen users ---
+
+        // If current user's location data is not available, we can't perform prioritized matching.
+        // We'll return a list of all users they haven't seen yet.
+        if (!currentUser || (!currentUser.gymAddress && !currentUser.gymCoordinates && !currentUser.city)) {
+            const profiles = allUsers.filter(u => !seenUserIds.has(u.uid));
+            return NextResponse.json({ profiles });
+        }
 
         const sameGym: UserProfile[] = [];
         const nearby: UserProfile[] = [];
         const sameCity: UserProfile[] = [];
+        const others: UserProfile[] = []; // Fallback for anyone else
 
         allUsers.forEach(user => {
             if (seenUserIds.has(user.uid)) return;
@@ -98,12 +102,18 @@ export async function GET(req: Request) {
             // Priority 3: Same City
             if (!added && currentUser.city && user.city && currentUser.city === user.city) {
                 sameCity.push(user);
+                added = true;
+            }
+            
+            // Fallback for remaining users
+            if (!added) {
+                others.push(user);
             }
         });
 
-        const sortedProfiles = [...sameGym, ...nearby, ...sameCity];
+        const sortedProfiles = [...sameGym, ...nearby, ...sameCity, ...others];
 
-        // Ensure no duplicates and user is not already seen
+        // This final filter is redundant due to the check at the start of the loop, but it's a good safeguard.
         const finalProfiles = sortedProfiles.filter(p => !seenUserIds.has(p.uid));
         
         return NextResponse.json({ profiles: finalProfiles });

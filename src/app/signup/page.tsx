@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider, getAdditionalUserInfo } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useAuth, useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -45,9 +45,11 @@ const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
   password: z
     .string()
-    .min(6, { message: 'Password must be at least 6 characters.' }),
+    .min(6, { message: 'Password must be at least 6 characters.' }).optional(),
   fitnessLevel: z.enum(['Beginner', 'Intermediate', 'Advanced']),
   bio: z.string().max(160, { message: "Bio cannot be longer than 160 characters." }).optional(),
+  city: z.string().min(1, { message: "City is required for matching." }),
+  gymAddress: z.string().optional(),
   weight: z.coerce.number().min(0, { message: "Weight must be a positive number."}).optional(),
   gender: z.enum(['Male', 'Female', 'Other', 'Prefer not to say']).optional(),
 });
@@ -56,11 +58,13 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function SignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const auth = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isGoogleSignUp, setIsGoogleSignUp] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -70,40 +74,74 @@ export default function SignupPage() {
       password: '',
       fitnessLevel: 'Beginner',
       bio: '',
+      city: '',
+      gymAddress: '',
       weight: '' as any,
       gender: 'Prefer not to say',
     },
   });
 
+  useEffect(() => {
+    if (searchParams.get('isGoogleSignUp')) {
+      setIsGoogleSignUp(true);
+      form.setValue('name', searchParams.get('name') || '');
+      form.setValue('email', searchParams.get('email') || '');
+      // Make password optional for Google sign-ups
+      form.clearErrors('password');
+    }
+  }, [searchParams, form]);
+
+
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
     try {
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        data.email,
-        data.password
-      );
-      const user = userCredential.user;
-      
-      await updateProfile(user, {
-        displayName: data.name,
-      });
+      let user;
+      // If it's a google sign up, the user is already "signed in"
+      // we just need to create their full profile in firestore
+      if (isGoogleSignUp) {
+        if (!auth.currentUser) throw new Error("Google user not authenticated.");
+        user = auth.currentUser;
+      } else {
+         if (!data.password) {
+            toast({ variant: 'destructive', title: 'Password is required' });
+            setIsLoading(false);
+            return;
+         }
+         const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            data.email,
+            data.password
+        );
+        user = userCredential.user;
+        await updateProfile(user, {
+            displayName: data.name,
+        });
+      }
 
       const userDocRef = doc(firestore, 'users', user.uid);
       
+      const photoURL = isGoogleSignUp ? searchParams.get('photoURL') : '';
+      
+      // In a real app, you'd geocode the address. For now, we use a placeholder.
+      const placeholderCoords = data.gymAddress ? { latitude: 34.0522, longitude: -118.2437 } : null;
+
       await setDoc(userDocRef, {
         uid: user.uid,
         name: data.name,
         email: data.email,
+        photoURL: photoURL,
         fitnessLevel: data.fitnessLevel,
         bio: data.bio || '',
+        city: data.city,
+        gymAddress: data.gymAddress || '',
+        gymCoordinates: placeholderCoords,
         weight: data.weight || null,
         gender: data.gender || null,
         createdAt: serverTimestamp(),
       });
 
       await user.reload();
-      // The AuthLayout will handle redirecting the user to the dashboard
+      router.push('/dashboard');
     } catch (error) {
        let description = 'An unexpected error occurred. Please try again.';
        if (error instanceof FirebaseError) {
@@ -122,61 +160,15 @@ export default function SignupPage() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setIsGoogleLoading(true);
-    const provider = new GoogleAuthProvider();
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      const additionalInfo = getAdditionalUserInfo(result);
-
-      if (additionalInfo?.isNewUser) {
-        // Create a basic user document in Firestore for new users
-        const userDocRef = doc(firestore, 'users', user.uid);
-        await setDoc(userDocRef, {
-          uid: user.uid,
-          name: user.displayName,
-          email: user.email,
-          photoURL: user.photoURL,
-          createdAt: serverTimestamp(),
-        });
-        // Redirect to onboarding page to collect more info
-        router.push('/onboarding');
-      }
-      // For existing users, AuthLayout will handle the redirect
-    } catch (error) {
-      if (error instanceof FirebaseError) {
-        if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
-          // User cancelled the popup, so we do nothing.
-          setIsGoogleLoading(false);
-          return;
-        }
-        if (error.code === 'auth/account-exists-with-different-credential') {
-          toast({
-            variant: 'destructive',
-            title: 'Google Sign-In Failed',
-            description: 'An account already exists with this email. Please sign in using the original method.',
-          });
-        }
-      } else {
-        console.error('Google sign-in error:', error);
-        toast({
-            variant: 'destructive',
-            title: 'Google Sign-In Failed',
-            description: 'Could not sign in with Google. Please try again.',
-        });
-      }
-      setIsGoogleLoading(false);
-    }
-  };
-
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background py-12">
-      <Card className="mx-auto max-w-sm w-full">
+      <Card className="mx-auto w-full max-w-lg">
         <CardHeader>
-          <CardTitle className="text-xl">Sign Up</CardTitle>
+          <CardTitle className="text-xl">
+            {isGoogleSignUp ? "Complete Your Profile" : "Create an Account"}
+          </CardTitle>
           <CardDescription>
-            Enter your information to create an account
+            {isGoogleSignUp ? "Just a few more details and you're all set!" : "Enter your information to get started."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -189,7 +181,7 @@ export default function SignupPage() {
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Alex" {...field} />
+                      <Input placeholder="Alex" {...field} readOnly={isGoogleSignUp}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -206,25 +198,28 @@ export default function SignupPage() {
                         type="email"
                         placeholder="m@example.com"
                         {...field}
+                        readOnly={isGoogleSignUp}
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {!isGoogleSignUp && (
+                <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                        <Input type="password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              )}
                <FormField
                 control={form.control}
                 name="bio"
@@ -232,12 +227,40 @@ export default function SignupPage() {
                   <FormItem>
                     <FormLabel>Bio</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Tell us a little about yourself." {...field} />
+                      <Textarea placeholder="Tell us a little about your fitness journey..." {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              <div className="grid grid-cols-2 gap-4">
+                 <FormField
+                    control={form.control}
+                    name="city"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>City *</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g. Los Angeles" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="gymAddress"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Gym Address</FormLabel>
+                        <FormControl>
+                        <Input placeholder="Optional: 123 Fitness St." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                     control={form.control}
@@ -303,33 +326,33 @@ export default function SignupPage() {
               />
               <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create an account
+                {isGoogleSignUp ? "Complete Profile" : "Create Account"}
               </Button>
             </form>
           </Form>
-           <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                Or continue with
-                </span>
-            </div>
-          </div>
-           <Button
-            variant="outline"
-            className="w-full"
-            onClick={handleGoogleSignIn}
-            disabled={isLoading || isGoogleLoading}
-            >
-            {isGoogleLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-                <GoogleIcon className="mr-2 h-4 w-4" />
-            )}
-            Google
-            </Button>
+           {!isGoogleSignUp && (
+             <>
+                <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">
+                        Or continue with
+                        </span>
+                    </div>
+                </div>
+                <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => router.push('/login')}
+                    disabled={true}
+                    >
+                    <GoogleIcon className="mr-2 h-4 w-4" />
+                    Google
+                </Button>
+             </>
+           )}
           <div className="mt-4 text-center text-sm">
             Already have an account?{' '}
             <Link href="/login" className="underline">

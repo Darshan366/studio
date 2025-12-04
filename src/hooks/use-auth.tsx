@@ -19,9 +19,9 @@ export const AuthLayout = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const pathname = usePathname();
   
-  const isAuthPage = pathname === '/login' || pathname === '/signup';
+  const isAuthPage = pathname === '/login';
+  const isSignUpPage = pathname === '/signup';
   const isMarketingPage = pathname === '/';
-  const isOnboardingPage = pathname === '/onboarding';
 
 
   useEffect(() => {
@@ -29,16 +29,16 @@ export const AuthLayout = ({ children }: { children: ReactNode }) => {
 
     if (user) {
         // If user is logged in, and they are on a marketing/auth page, redirect to dashboard
-        if (isAuthPage || isMarketingPage) {
+        if (isAuthPage || isMarketingPage || isSignUpPage) {
             router.push('/dashboard');
         }
     } else {
         // If user is not logged in and not on a public/auth page, redirect to landing
-        if (!isAuthPage && !isMarketingPage && !isOnboardingPage) {
+        if (!isAuthPage && !isMarketingPage && !isSignUpPage) {
             router.push('/');
         }
     }
-  }, [user, isUserLoading, isAuthPage, isMarketingPage, isOnboardingPage, router, pathname]);
+  }, [user, isUserLoading, isAuthPage, isMarketingPage, isSignUpPage, router, pathname]);
 
   if (isUserLoading) {
     return (
@@ -49,17 +49,12 @@ export const AuthLayout = ({ children }: { children: ReactNode }) => {
   }
 
   // Render pages that don't need the main app layout
-  if (!user && (isAuthPage || isMarketingPage)) {
+  if (!user && (isAuthPage || isMarketingPage || isSignUpPage)) {
     return <>{children}</>;
   }
 
-  // Render onboarding page without layout as well, but only if user is logged in
-  if (user && isOnboardingPage) {
-    return <>{children}</>;
-  }
-
-  // If user is logged in and not on onboarding, show the main app layout
-  if (user && !isOnboardingPage) {
+  // If user is logged in, show the main app layout
+  if (user) {
     return (
         <SidebarProvider defaultOpen>
           <Sidebar collapsible="icon" variant="sidebar" side="left">
