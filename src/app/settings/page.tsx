@@ -405,8 +405,14 @@ export default function SettingsPage() {
             const userDocRef = doc(firestore, 'users', user.uid);
             await updateDoc(userDocRef, { photoURL: downloadURL });
             
-            // This will trigger the useUser hook to get fresh data
+            // Force a reload of the user object to get the new photoURL
+            // This is critical for the UI to update
             await auth.currentUser.reload();
+            // Manually trigger a re-render by updating the user from the reloaded currentUser
+            // This part is tricky with hooks. The reload should trigger the onAuthStateChanged listener,
+            // but we can force it here for immediate feedback if needed.
+            // A router refresh can also help re-trigger data fetching hooks.
+            window.location.reload();
             
             toast({
                 title: 'Avatar Updated',
@@ -540,3 +546,5 @@ export default function SettingsPage() {
         </div>
     )
 }
+
+    
