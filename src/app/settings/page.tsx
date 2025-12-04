@@ -448,11 +448,15 @@ export default function SettingsPage() {
                 if (type === 'avatar') {
                     setAvatarUrl(secure_url);
                     await updateProfile(auth.currentUser!, { photoURL: secure_url });
-                    await updateDoc(userDocRef!, { photoURL: secure_url });
+                    if (userDocRef) {
+                      await updateDoc(userDocRef, { photoURL: secure_url });
+                    }
                     toast({ title: 'Avatar Updated', description: 'Your new profile picture looks great!' });
                 } else {
                     setCoverUrl(secure_url);
-                    await updateDoc(userDocRef!, { coverURL: secure_url });
+                     if (userDocRef) {
+                      await updateDoc(userDocRef, { coverURL: secure_url });
+                    }
                     toast({ title: 'Cover Photo Updated', description: 'Your new banner looks great!' });
                 }
             }
@@ -568,35 +572,11 @@ export default function SettingsPage() {
                 </CardContent>
             </Card>
 
-            <Tabs defaultValue="workouts" className="w-full mt-6">
-                <TabsList className="grid w-full grid-cols-5 bg-muted/60">
-                    <TabsTrigger value="workouts">Workouts</TabsTrigger>
-                    <TabsTrigger value="progress">Progress</TabsTrigger>
-                    <TabsTrigger value="achievements">Achievements</TabsTrigger>
+            <Tabs defaultValue="edit" className="w-full mt-6">
+                <TabsList className="grid w-full grid-cols-2 bg-muted/60">
                     <TabsTrigger value="edit">Edit Profile</TabsTrigger>
                     <TabsTrigger value="danger" className="text-destructive/70 data-[state=active]:text-destructive data-[state=active]:bg-destructive/20">Danger Zone</TabsTrigger>
                 </TabsList>
-                <TabsContent value="workouts">
-                    <Card className="bg-card/80 border-border/40">
-                        <CardContent className="p-6 text-center text-muted-foreground">
-                            Workout history will be displayed here.
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="progress">
-                     <Card className="bg-card/80 border-border/40">
-                        <CardContent className="p-6 text-center text-muted-foreground">
-                            Progress charts and stats will be displayed here.
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-                <TabsContent value="achievements">
-                     <Card className="bg-card/80 border-border/40">
-                        <CardContent className="p-6 text-center text-muted-foreground">
-                            Unlocked achievements and badges will be displayed here.
-                        </CardContent>
-                    </Card>
-                </TabsContent>
                 <TabsContent value="edit">
                     <EditProfileForm />
                 </TabsContent>
