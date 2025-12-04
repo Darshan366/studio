@@ -71,7 +71,8 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
-      // The onAuthStateChanged listener in AuthLayout will handle the redirect on success.
+      // Explicitly redirect on success
+      router.push('/dashboard');
     } catch (error) {
         let title = 'Login Failed';
         let description = 'An unexpected error occurred. Please try again.';
@@ -136,7 +137,11 @@ export default function LoginPage() {
       const userDocRef = doc(firestore, 'users', user.uid);
       const docSnap = await getDoc(userDocRef);
 
-      if (!docSnap.exists()) {
+      if (docSnap.exists()) {
+        // If user exists, redirect to dashboard
+        router.push('/dashboard');
+      } else {
+        // If user is new, redirect to signup to complete profile
         const queryParams = new URLSearchParams({
           name: user.displayName || '',
           email: user.email || '',
@@ -148,6 +153,7 @@ export default function LoginPage() {
     } catch (error) {
        if (error instanceof FirebaseError) {
           if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
+            // No toast needed if user cancels the popup
             setIsGoogleLoading(false);
             return;
           }
