@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -14,10 +17,10 @@ import { useUser, useAuth, useFirebaseApp, useFirestore, useDoc, useMemoFirebase
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { updateProfile } from "firebase/auth"
+import { updateProfile, deleteUser } from "firebase/auth"
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from "@/hooks/use-toast"
-import { Loader2, User, Dumbbell, Heart, Camera, BarChart3, Trophy, Flame, MapPin, Weight, VenetianMask } from "lucide-react"
+import { Loader2, User, Dumbbell, Heart, Camera, BarChart3, Trophy, Flame, MapPin, Weight, VenetianMask, ShieldAlert } from "lucide-react"
 import { doc, updateDoc } from "firebase/firestore"
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -26,6 +29,17 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Image from "next/image"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { UserProfile } from "@/types/user";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 const profileFormSchema = z.object({
     name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -257,6 +271,97 @@ function EditProfileForm() {
     )
 }
 
+function DangerZone() {
+    const { user } = useUser();
+    const auth = useAuth();
+    const { toast } = useToast();
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDeleteAccount = async () => {
+        if (!user || !auth.currentUser) return;
+        setIsDeleting(true);
+        
+        try {
+            // First, call the Cloud Function to delete all associated Firestore data
+            const token = await auth.currentUser.getIdToken();
+            const response = await fetch('/api/delete-user', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to delete user data from server.');
+            }
+
+            // If server-side deletion is successful, delete the user from Firebase Auth
+            await deleteUser(auth.currentUser);
+
+            toast({
+                title: "Account Deleted",
+                description: "Your account and all associated data have been successfully deleted.",
+            });
+            // The use-auth hook will handle the redirect to the login page on auth state change
+            
+        } catch (error: any) {
+            console.error("Error deleting account:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Deletion Failed',
+                description: error.message || 'There was a problem deleting your account. Please try again.',
+            });
+        } finally {
+            setIsDeleting(false);
+        }
+    }
+
+    return (
+        <Card className="border-destructive/50 bg-destructive/10">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                    <ShieldAlert size={20} /> Danger Zone
+                </CardTitle>
+                <CardDescription className="text-destructive/80">
+                    These actions are permanent and cannot be undone.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="font-semibold">Delete Account</p>
+                        <p className="text-sm text-destructive/80">Permanently delete your account and all of your data.</p>
+                    </div>
+                     <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" disabled={isDeleting}>
+                                {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Delete Account
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete your account
+                                and remove all your data from our servers, including matches and conversations.
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteAccount} className="bg-destructive hover:bg-destructive/90">
+                                Yes, delete my account
+                            </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
 const statCards = [
   { label: 'Workouts', value: '78', icon: Dumbbell },
   { label: 'Streak', value: '12 days', icon: Flame },
@@ -401,11 +506,12 @@ export default function SettingsPage() {
             </Card>
 
             <Tabs defaultValue="workouts" className="w-full mt-6">
-                <TabsList className="grid w-full grid-cols-4 bg-muted/60">
+                <TabsList className="grid w-full grid-cols-5 bg-muted/60">
                     <TabsTrigger value="workouts">Workouts</TabsTrigger>
                     <TabsTrigger value="progress">Progress</TabsTrigger>
                     <TabsTrigger value="achievements">Achievements</TabsTrigger>
                     <TabsTrigger value="edit">Edit Profile</TabsTrigger>
+                    <TabsTrigger value="danger" className="text-destructive/70 data-[state=active]:text-destructive data-[state=active]:bg-destructive/20">Danger Zone</TabsTrigger>
                 </TabsList>
                 <TabsContent value="workouts">
                     <Card className="bg-card/80 border-border/40">
@@ -430,6 +536,9 @@ export default function SettingsPage() {
                 </TabsContent>
                 <TabsContent value="edit">
                     <EditProfileForm />
+                </TabsContent>
+                <TabsContent value="danger">
+                   <DangerZone />
                 </TabsContent>
             </Tabs>
         </div>
