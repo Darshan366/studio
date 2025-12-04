@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -19,7 +18,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { updateProfile, deleteUser } from "firebase/auth"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2, User, Dumbbell, Heart, Camera, BarChart3, Trophy, Flame, MapPin, Weight, VenetianMask, ShieldAlert } from "lucide-react"
+import { Loader2, User, Dumbbell, Heart, Camera, BarChart3, Trophy, Flame, MapPin, Weight, VenetianMask, ShieldAlert, Utensils } from "lucide-react"
 import { doc, updateDoc } from "firebase/firestore"
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -49,6 +48,7 @@ const profileFormSchema = z.object({
     gymAddress: z.string().optional(),
     weight: z.coerce.number().min(0, "Weight must be a positive number.").optional(),
     gender: z.enum(['Male', 'Female', 'Other', 'Prefer not to say']).optional(),
+    dietaryPreference: z.enum(['Anything', 'Vegetarian', 'Vegan']).optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -73,6 +73,7 @@ function EditProfileForm() {
             gymAddress: '',
             weight: '' as any, // Initialize with empty string to make it a controlled component
             gender: 'Prefer not to say',
+            dietaryPreference: 'Anything',
         }
     });
 
@@ -86,6 +87,7 @@ function EditProfileForm() {
                 gymAddress: userProfile.gymAddress || '',
                 weight: userProfile.weight || '' as any,
                 gender: userProfile.gender || 'Prefer not to say',
+                dietaryPreference: userProfile.dietaryPreference || 'Anything',
             });
         }
     }, [userProfile, form]);
@@ -111,6 +113,7 @@ function EditProfileForm() {
                 gymCoordinates: placeholderCoords, // Add real geocoding in production
                 weight: data.weight,
                 gender: data.gender,
+                dietaryPreference: data.dietaryPreference,
             });
 
             toast({
@@ -207,28 +210,52 @@ function EditProfileForm() {
                             )}
                         />
                     </div>
-                    <FormField
-                        control={form.control}
-                        name="fitnessLevel"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="flex items-center gap-2 text-muted-foreground"><Dumbbell size={14}/> Fitness Level</FormLabel>
-                                 <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                    <SelectTrigger className="bg-muted/40 border-border/30 focus:bg-background/60 transition-all">
-                                        <SelectValue placeholder="Select your fitness level" />
-                                    </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="Beginner">Beginner</SelectItem>
-                                        <SelectItem value="Intermediate">Intermediate</SelectItem>
-                                        <SelectItem value="Advanced">Advanced</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="fitnessLevel"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="flex items-center gap-2 text-muted-foreground"><Dumbbell size={14}/> Fitness Level</FormLabel>
+                                     <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                        <SelectTrigger className="bg-muted/40 border-border/30 focus:bg-background/60 transition-all">
+                                            <SelectValue placeholder="Select your fitness level" />
+                                        </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="Beginner">Beginner</SelectItem>
+                                            <SelectItem value="Intermediate">Intermediate</SelectItem>
+                                            <SelectItem value="Advanced">Advanced</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="dietaryPreference"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="flex items-center gap-2 text-muted-foreground"><Utensils size={14}/> Dietary Preference</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                        <SelectTrigger className="bg-muted/40 border-border/30 focus:bg-background/60 transition-all">
+                                            <SelectValue placeholder="Select your diet" />
+                                        </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="Anything">Anything</SelectItem>
+                                            <SelectItem value="Vegetarian">Vegetarian</SelectItem>
+                                            <SelectItem value="Vegan">Vegan</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                             control={form.control}

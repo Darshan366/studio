@@ -52,6 +52,7 @@ const formSchema = z.object({
   gymAddress: z.string().optional(),
   weight: z.coerce.number().min(0, { message: "Weight must be a positive number."}).optional(),
   gender: z.enum(['Male', 'Female', 'Other', 'Prefer not to say']).optional(),
+  dietaryPreference: z.enum(['Anything', 'Vegetarian', 'Vegan']).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -78,6 +79,7 @@ export default function SignupPage() {
       gymAddress: '',
       weight: '' as any,
       gender: 'Prefer not to say',
+      dietaryPreference: 'Anything',
     },
   });
 
@@ -137,6 +139,7 @@ export default function SignupPage() {
         gymCoordinates: placeholderCoords,
         weight: data.weight || null,
         gender: data.gender || null,
+        dietaryPreference: data.dietaryPreference || 'Anything',
         createdAt: serverTimestamp(),
       });
 
@@ -299,31 +302,55 @@ export default function SignupPage() {
                     )}
                 />
               </div>
-              <FormField
-                control={form.control}
-                name="fitnessLevel"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Fitness Level</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select your level" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Beginner">Beginner</SelectItem>
-                        <SelectItem value="Intermediate">Intermediate</SelectItem>
-                        <SelectItem value="Advanced">Advanced</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="fitnessLevel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fitness Level</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select your level" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Beginner">Beginner</SelectItem>
+                          <SelectItem value="Intermediate">Intermediate</SelectItem>
+                          <SelectItem value="Advanced">Advanced</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="dietaryPreference"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Diet</FormLabel>
+                         <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select diet" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                <SelectItem value="Anything">Anything</SelectItem>
+                                <SelectItem value="Vegetarian">Vegetarian</SelectItem>
+                                <SelectItem value="Vegan">Vegan</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              </div>
               <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isGoogleSignUp ? "Complete Profile" : "Create Account"}

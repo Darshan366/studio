@@ -24,7 +24,7 @@ export const UserProfileSchema = z.object({
   lastCheckInDate: z.string().optional(),
   weight: z.number().optional(),
   gender: z.enum(['Male', 'Female', 'Other', 'Prefer not to say']).optional(),
-  dietaryPreference: z.enum(['Anything', 'Vegetarian', 'Vegan']).optional(),
+  dietaryPreference: z.enum(['Anything', 'Vegetarian', 'Vegan']).default('Anything').optional(),
 });
 
 
