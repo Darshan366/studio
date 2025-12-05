@@ -1,7 +1,8 @@
 'use server';
 
-import { genkit, Ai } from '@genkit-ai/ai';
+import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
+import { Ai } from '@genkit-ai/ai';
 
 // In Genkit v1.x, the 'ai' object is the modern replacement for 'configureGenkit'.
 // Options like 'logLevel' and 'enableTracingAndMetrics' are configured differently
