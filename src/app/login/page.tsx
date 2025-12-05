@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -78,8 +79,17 @@ export default function LoginPage() {
         let description = 'An unexpected error occurred. Please try again.';
 
         if (error instanceof FirebaseError) {
-            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                description = 'Invalid email or password. Please try again.';
+            switch (error.code) {
+                case 'auth/user-not-found':
+                    description = 'No account found with this email address.';
+                    break;
+                case 'auth/wrong-password':
+                case 'auth/invalid-credential':
+                    description = 'Incorrect password. Please try again.';
+                    break;
+                default:
+                    description = 'An unexpected error occurred. Please try again.';
+                    break;
             }
         }
         
