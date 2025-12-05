@@ -144,22 +144,16 @@ export default function LoginPage() {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       
-      const userDocRef = doc(firestore, 'users', user.uid);
-      const docSnap = await getDoc(userDocRef);
+      // Instead of checking for the doc here, we'll redirect to signup page
+      // which will handle both new and existing google users.
+      const queryParams = new URLSearchParams({
+        name: user.displayName || '',
+        email: user.email || '',
+        photoURL: user.photoURL || '',
+        isGoogleSignUp: 'true',
+      }).toString();
+      router.push(`/signup?${queryParams}`);
 
-      if (docSnap.exists()) {
-        // If user exists, redirect to dashboard
-        router.push('/dashboard');
-      } else {
-        // If user is new, redirect to signup to complete profile
-        const queryParams = new URLSearchParams({
-          name: user.displayName || '',
-          email: user.email || '',
-          photoURL: user.photoURL || '',
-          isGoogleSignUp: 'true',
-        }).toString();
-        router.push(`/signup?${queryParams}`);
-      }
     } catch (error) {
        if (error instanceof FirebaseError) {
           if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {

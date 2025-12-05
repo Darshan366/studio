@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,9 +7,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { useAuth, useFirestore } from '@/firebase';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
+import { useAuth, useFirestore, useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -61,6 +62,7 @@ export default function SignupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const auth = useAuth();
+  const { user: authUser, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -84,14 +86,26 @@ export default function SignupPage() {
   });
 
   useEffect(() => {
-    if (searchParams.get('isGoogleSignUp')) {
+    const isGoogleFlow = searchParams.get('isGoogleSignUp') === 'true';
+    if (isGoogleFlow) {
       setIsGoogleSignUp(true);
       form.setValue('name', searchParams.get('name') || '');
       form.setValue('email', searchParams.get('email') || '');
       // Make password optional for Google sign-ups
       form.clearErrors('password');
+
+      // If user is already authenticated via Google, check if they exist in DB
+      if (authUser && !isAuthLoading) {
+          const userDocRef = doc(firestore, 'users', authUser.uid);
+          getDoc(userDocRef).then(docSnap => {
+              if (docSnap.exists()) {
+                  // User already exists, redirect to dashboard
+                  router.push('/dashboard');
+              }
+          });
+      }
     }
-  }, [searchParams, form]);
+  }, [searchParams, form, authUser, isAuthLoading, firestore, router]);
 
 
   const onSubmit = async (data: FormValues) => {
@@ -162,6 +176,14 @@ export default function SignupPage() {
         setIsLoading(false);
     }
   };
+  
+  if (isAuthLoading) {
+      return (
+          <div className="flex h-screen items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+      )
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background py-12">
