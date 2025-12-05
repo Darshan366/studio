@@ -4,7 +4,6 @@ import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase';
 import { AuthLayout } from '@/hooks/use-auth';
 import { WorkoutProvider } from '@/context/WorkoutContext';
-import AIChatWidget from '@/components/ai-chat-widget';
 
 export const metadata: Metadata = {
   title: 'Gym Grinders',
@@ -32,7 +31,6 @@ export default function RootLayout({
           <WorkoutProvider>
             <AuthLayout>
               {children}
-              <AIChatWidget />
             </AuthLayout>
           </WorkoutProvider>
         </FirebaseClientProvider>
