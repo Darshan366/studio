@@ -88,7 +88,7 @@ export default function LoginPage() {
                     description = 'Incorrect password. Please try again.';
                     break;
                 default:
-                    description = 'An unexpected error occurred. Please try again.';
+                    description = 'Invalid email or password. Please try again.';
                     break;
             }
         }
