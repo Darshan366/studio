@@ -142,24 +142,6 @@ export default function MealPlanner() {
                         Plan your meals for the week. Use the AI chat for ideas!
                     </p>
                 </div>
-                 <Dialog>
-                    <DialogTrigger asChild>
-                        <Button size="icon" variant="outline" className="rounded-full h-10 w-10 bg-primary/10 border-primary/20 text-primary shadow-gym-glow shadow-primary/20 hover:bg-primary/20 hover:scale-105 transition-all">
-                            <Bot className="h-5 w-5" />
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl h-3/4 flex flex-col">
-                        <DialogHeader>
-                            <DialogTitle>AI Meal Assistant</DialogTitle>
-                            <DialogDescription>
-                            Ask me anything about nutrition or get meal ideas!
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="flex-1 overflow-hidden rounded-lg">
-                            <N8nChat />
-                        </div>
-                    </DialogContent>
-                </Dialog>
             </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto">
@@ -235,4 +217,3 @@ export default function MealPlanner() {
 type MealPlan = {
   [key: string]: string[];
 };
-
