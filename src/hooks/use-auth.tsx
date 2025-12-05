@@ -19,40 +19,31 @@ export const AuthLayout = ({ children }: { children: ReactNode }) => {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const pathname = usePathname();
-  const [isRedirecting, setIsRedirecting] = useState(true);
   
   const isAuthPage = pathname === '/login';
   const isSignUpPage = pathname === '/signup';
   const isMarketingPage = pathname === '/';
+  const isPublicPage = isAuthPage || isSignUpPage || isMarketingPage;
 
 
   useEffect(() => {
+    // Wait until Firebase has finished loading the user's authentication state.
     if (isUserLoading) {
-      // Still waiting for Firebase to determine auth state
-      setIsRedirecting(true);
-      return;
+      return; // Do nothing until we know if the user is logged in or not.
     }
 
-    if (user) {
-        // If user is logged in, and they are on a marketing/auth page, redirect to dashboard
-        if (isAuthPage || isMarketingPage || isSignUpPage) {
-            router.push('/dashboard');
-            // We don't set isRedirecting to false here because the new page will take over rendering.
-        } else {
-            setIsRedirecting(false);
-        }
-    } else {
-        // If user is not logged in and not on a public/auth page, redirect to landing
-        if (!isAuthPage && !isMarketingPage && !isSignUpPage) {
-            router.push('/');
-             // We don't set isRedirecting to false here because the new page will take over rendering.
-        } else {
-            setIsRedirecting(false);
-        }
+    if (user && isPublicPage) {
+        // User is logged in but on a public page, redirect to the dashboard.
+        router.push('/dashboard');
+    } else if (!user && !isPublicPage) {
+        // User is not logged in and is on a protected page, redirect to the landing page.
+        router.push('/');
     }
-  }, [user, isUserLoading, isAuthPage, isMarketingPage, isSignUpPage, router, pathname]);
+  }, [user, isUserLoading, isPublicPage, router, pathname]);
 
-  if (isUserLoading || isRedirecting) {
+  // While loading, or if a redirect is imminent, show a loader.
+  // This prevents rendering a page flash before the redirect happens.
+  if (isUserLoading || (user && isPublicPage) || (!user && !isPublicPage)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -60,12 +51,7 @@ export const AuthLayout = ({ children }: { children: ReactNode }) => {
     );
   }
 
-  // Render pages that don't need the main app layout
-  if (!user && (isAuthPage || isMarketingPage || isSignUpPage)) {
-    return <>{children}</>;
-  }
-
-  // If user is logged in, show the main app layout
+  // If user is logged in and on a protected page, show the app layout
   if (user) {
     return (
         <SidebarProvider defaultOpen>
@@ -81,6 +67,6 @@ export const AuthLayout = ({ children }: { children: ReactNode }) => {
     );
   }
   
-  // This will be shown for non-logged-in users on public pages, after the initial redirect check.
+  // For non-logged-in users on a public page, show the page content.
   return <>{children}</>;
 };
